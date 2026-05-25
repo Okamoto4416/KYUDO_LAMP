@@ -1,12 +1,6 @@
 #include <WiFi.h>
 #include <WiFiUdp.h>
-
-const char* ssid     = "el2g-6cec04";
-const char* password = "402fng1001";
-
-IPAddress local_IP(192, 168, 0, 50);
-IPAddress gateway(192, 168, 0, 1);
-IPAddress subnet(255, 255, 255, 0);
+#include "routerAP_config.hpp"
 
 const int udpPort = 12345;
 
@@ -44,8 +38,8 @@ void setup() {
   pinMode(lampPin, OUTPUT);
 
   //WiFi
-  WiFi.config(local_IP, gateway, subnet);
-  WiFi.begin(ssid, password);
+  WiFi.config(lamp_ip, gateway, subnet);
+  WiFi.begin(ssid, pass);
   while (WiFi.status() != WL_CONNECTED) {
     Serial.println("Failed");
     delay(500);

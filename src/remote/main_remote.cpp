@@ -1,14 +1,8 @@
 #include <WiFi.h>
 #include <WiFiUdp.h>
+#include "routerAP_config.hpp"
 
-const char* ssid     = "el2g-6cec04";
-const char* password = "402fng1001";
 
-IPAddress local_IP(192, 168, 0, 60);
-IPAddress gateway(192, 168, 0, 1);
-IPAddress subnet(255, 255, 255, 0);
-
-const char* receiverIP = "192.168.0.50";
 const int udpPort = 12345;
 
 WiFiUDP udp;
@@ -21,8 +15,8 @@ void setup() {
 
   pinMode(buttonPin, INPUT_PULLUP);
 
-  WiFi.config(local_IP, gateway, subnet);
-  WiFi.begin(ssid, password);
+  WiFi.config(remote_ip, gateway, subnet);
+  WiFi.begin(ssid, pass);
 
   while (WiFi.status() != WL_CONNECTED) {
     delay(500);
@@ -36,7 +30,7 @@ void loop() {
 
   // 押した瞬間だけ送る（エッジ検出）
   if (currentButton && !prevButton) {
-    udp.beginPacket(receiverIP, udpPort);
+    udp.beginPacket(lamp_ip, udpPort);
     udp.print("TRUE");
     udp.endPacket();
 
