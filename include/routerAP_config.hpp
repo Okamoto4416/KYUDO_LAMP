@@ -1,6 +1,7 @@
 /*
 ルータをAPとして利用する場合の設定
 */
+#pragma once
 #include <WiFi.h>
 constexpr char ssid[] = "el2g-6cec04";
 constexpr char pass[] = "402fng1001";
@@ -15,3 +16,5 @@ const IPAddress lamp_ip(192, 168, 2, 50);    // ランプ側のIPアドレス
 const IPAddress remote_ip(192, 168, 2, 60); // リモコン側のIPアドレス
 const IPAddress gateway(192, 168, 2, 1);
 const IPAddress subnet(255, 255, 255, 0);
+
+const uint16_t udpPort =12345;
