@@ -1,5 +1,6 @@
+#pragma once
 #include <Arduino.h>
-#include "OverflowSafeComparator.hpp"
+#include "common.hpp"
 
 /*
 パターンでPINのHIGH,LOWを変える。
@@ -35,9 +36,7 @@ public:
     // loopでいっぱい実行すべきもの
     void update()
     {
-        const OverflowSafeComparator<unsigned long> comp(1000000);
-        auto now = millis();
-        if (comp.leq(now, this->nextChangeTime))
+        if (millisReached(this->nextChangeTime))
         {
             // 現在時刻が、変更時刻より後だったら一つ進める
             if (this->pattern & (0b10000000 >> idx))

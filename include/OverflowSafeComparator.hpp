@@ -1,3 +1,4 @@
+#pragma once
 /*
  * @file OverflowSafeComparator.h
  * @brief 有限カウンタのオーバーフローに対策した比較を扱うクラスの定義
