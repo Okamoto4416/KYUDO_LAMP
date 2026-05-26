@@ -5,3 +5,4 @@
 .vscode/ipch
 .vscode
 platformio_local.ini
+launchCode.cmd

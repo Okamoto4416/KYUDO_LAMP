@@ -10,10 +10,10 @@ L->H->L->H->L->H->L->L->
 */
 class PatternBlinking8bit
 {
-    constexpr static unsigned T = 100; // 切り替わるのに100msかける。周期800ms
-    unsigned char idx{0};              // パターンの左から何番目のをみるか。0-7をとる
-    unsigned char pattern{0};          // 点滅パターンを01で表す
-    unsigned long nextChangeTime;      // 次に切り替える時刻[ms]
+    constexpr static unsigned T = 1000; // 周期1s
+    unsigned char idx{0};               // パターンの左から何番目のをみるか。0-7をとる
+    unsigned char pattern{0};           // 点滅パターンを01で表す
+    unsigned long nextChangeTime;       // 次に切り替える時刻[ms]
     const uint8_t pin;
 
 public:
@@ -39,8 +39,8 @@ public:
         auto now = millis();
         if (comp.leq(now, this->nextChangeTime))
         {
-            //現在時刻が、変更時刻より後だったら一つ進める
-            if ((this->pattern << idx) & 0b10000000)
+            // 現在時刻が、変更時刻より後だったら一つ進める
+            if (this->pattern & (0b10000000 >> idx))
             {
                 // patternの左からidx番目が1ならば点灯
                 digitalWrite(this->pin, HIGH);
@@ -50,10 +50,9 @@ public:
                 // 0ならば消灯
                 digitalWrite(this->pin, LOW);
             }
-            this->nextChangeTime += T;
+            this->nextChangeTime += T / 8;
             this->idx++;
             this->idx %= 8;
         }
     }
-
 };
