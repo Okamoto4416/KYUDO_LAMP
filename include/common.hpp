@@ -10,25 +10,40 @@ now<t だったらfalse
 
 24時間の差であればmillisがオーバーフローしていても判定できる。
 */
-bool millisReached(unsigned long t){
-    static const OverflowSafeComparator<unsigned long>Comp(24*3600*1000);//
-    return Comp.leq(t,millis());
+bool millisReached(unsigned long t)
+{
+    static const OverflowSafeComparator<unsigned long> Comp(24 * 3600 * 1000); //
+    return Comp.leq(t, millis());
 }
 
-
+/**
+ * 前の状態と現在の状態を保持する
+ */
 template <typename T_state>
 struct StateMngr
 {
-    private:
+private:
     T_state _prev{};
     T_state _current{};
-    public:
+
+public:
+    /**
+     * 状態をセットする
+     */
     T_state set(T_state newstate)
     {
         auto r = prev;
         prev = current;
         current = newstate;
         return r;
+    }
+
+    /**
+     * 同じ状態にセットする
+     */
+    T_state set()
+    {
+        return set(_current);
     }
     T_state prev()
     {
@@ -37,5 +52,9 @@ struct StateMngr
     T_state current()
     {
         return current;
+    }
+    T_state operator()()
+    {
+        return current();
     }
 };
