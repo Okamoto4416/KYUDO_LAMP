@@ -45,15 +45,15 @@ public:
     {
         return set(_current);
     }
-    T_state prev()
+    T_state prev() const
     {
         return prev;
     }
-    T_state current()
+    T_state current() const
     {
         return current;
     }
-    T_state operator()()
+    T_state operator()() const
     {
         return current();
     }
