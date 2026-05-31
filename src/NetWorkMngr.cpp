@@ -1,6 +1,5 @@
 #include "NetWorkMngr.hpp"
 
-
 NetworkMngr_t NetworkMngr;
 
 LinkMonitor::LinkMonitor(NetworkMngr_t &NW) : NW(NW) {};
@@ -30,12 +29,17 @@ bool LinkMonitor::receive_packet(JsonObjectConst rx_json)
         return false;
 }
 
+// measureパケットが来たら呼び出される
+// ack_measureパケットを返す
 void LinkMonitor::receive_measure_packet(JsonObjectConst rx_json)
 {
+    auto measureSeqId = rx_json["measureSeqId"].as<uint16_t>();
+    auto t0 = rx_json["t0"].as<unsigned long>();
     auto tx_json = NW.beginTxJson();
     // rx_jsonをtype:ack_measure,t1:millis()にして送り返す。
-    tx_json.set(rx_json);
     tx_json["type"] = "ack_measure";
+    tx_json["measureSeqId"] = rx_json["measureSeqId"];
+    tx_json["t0"] = rx_json["t0"];
     tx_json["t1"] = millis();
 
     NW.sendTxJson();
@@ -146,6 +150,7 @@ void LinkMonitor::update()
     }
 }
 
+// measureパケットを送る
 bool LinkMonitor::send_measure_packet()
 {
     ackHistory[0] = 0;
@@ -154,7 +159,8 @@ bool LinkMonitor::send_measure_packet()
     tx_json["type"] = "measure";
     tx_json["measureSeqId"] = ++measureSeqId;
     tx_json["t0"] = millis();
-    return NW.sendTxJson() == NetworkMngr_t::Udp_SendResult::Success;
+    auto r = NW.sendTxJson();
+    return r == NetworkMngr_t::Udp_SendResult::Success;
 }
 
 void LinkMonitor::step_bitset()
@@ -364,19 +370,19 @@ NetworkMngr_t::Udp_SendResult NetworkMngr_t::udp_send()
 
     // JSONを文字列化
     size_t capacity = measureJson(tx_jsonDocWork); // jsonのバッファサイズを計算
-    if (capacity + 1 > sizeof(packetBuf))
+    if (capacity + 1 > sizeof(tx_packetBuf))
     {
         // 情報が大きすぎる
         return Udp_SendResult::Err_PacketTooLarge;
     }
-    size_t len = serializeJson(tx_jsonDocWork, packetBuf); // シリアライズ
+    size_t len = serializeJson(tx_jsonDocWork, tx_packetBuf); // シリアライズ
 
     // パケット作って送信
     int r;
     r = udp.beginPacket(peer_ip, udpPort);
     if (!r)
         return Udp_SendResult::Err_BeginPacketFailed;
-    udp.write((const uint8_t *)packetBuf, len);
+    udp.write((const uint8_t *)tx_packetBuf, len);
     r = udp.endPacket();
     if (!r)
         return Udp_SendResult::Err_EndPacketFailed;
@@ -391,6 +397,10 @@ UDP受信して、JSONにパースして、処理する
 */
 int NetworkMngr_t::udp_receive()
 {
+    // APに接続されていなければ終了
+    if (WiFi.status() != WL_CONNECTED)
+        return 0;
+
     // UDP受信があるか確認する
     int packetSize = udp.parsePacket();
     if (!packetSize)
@@ -400,10 +410,10 @@ int NetworkMngr_t::udp_receive()
     }
 
     // ぱけっと読み取り
-    int len = udp.read(packetBuf, sizeof(packetBuf));
+    int len = udp.read(rx_packetBuf, sizeof(rx_packetBuf));
 
     // jsonにパース
-    auto err = deserializeJson(rx_jsonDocWork, packetBuf, len);
+    auto err = deserializeJson(rx_jsonDocWork, rx_packetBuf, len);
     if (err != DeserializationError::Ok)
     {
         // パースに失敗
@@ -414,11 +424,13 @@ int NetworkMngr_t::udp_receive()
     // 計測パケットだったらこちらで処理
     auto r = this->linkMonitor.receive_packet(rx_jsonDocWork.as<JsonObjectConst>());
     if (r)
+    {
         // 計測パケットだったらmeasurePacketCallbackに送る
-        this->measurePacketCallback(rx_jsonDocWork.as<JsonObjectConst>(), packetBuf, len);
+        this->measurePacketCallback(rx_jsonDocWork.as<JsonObjectConst>());
+    }
     else
         // 計測パケットじゃなかったら委託
-        this->udpReceiveCallback(rx_jsonDocWork.as<JsonObjectConst>(), packetBuf, len);
+        this->udpReceiveCallback(rx_jsonDocWork.as<JsonObjectConst>());
 
     // jsonクリア
     rx_jsonDocWork.clear();

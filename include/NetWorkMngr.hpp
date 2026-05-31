@@ -279,14 +279,15 @@ public:
             return "";
         }
     }
-    using JsonDoc_t = StaticJsonDocument<512>;
+    using JsonDoc_t = StaticJsonDocument<192>;
     using Buff_t = char[256];
     /**
-     * 引数：受け取ったjsonobjectと 受け取った文字列と そのサイズ
+     * 引数：受け取ったjsonobject
+     * (元文字列を渡そうと思ったけど、デシリアライズしている時点で改変されるので無理だった)
      */
-    using UdpReceiveCallback_t = void (*)(JsonObjectConst, const char *, int);
+    using UdpReceiveCallback_t = void (*)(JsonObjectConst);
 
-    static void NOfn(JsonObjectConst, const char *, int) {};
+    static void NOfn(JsonObjectConst) {};
 
 private:
     StateMngr<State_t> state; // wifiのステータス
@@ -344,7 +345,8 @@ private:
     WiFiUDP udp;
     txPacketId_t txPacketId = 0;
     UdpReceiveCallback_t udpReceiveCallback; // 受信したudpを処理する関数
-    Buff_t packetBuf;                        // packetバッファ。情報を保持させるな。送受信するときだけ使え
+    Buff_t tx_packetBuf;                        // packetバッファ。情報を保持させるな。送信するときだけ使え
+    Buff_t rx_packetBuf;                        // packetバッファ。情報を保持させるな。受信するときだけ使え
 
     UdpReceiveCallback_t measurePacketCallback; // 計測パケットが来た時に呼ばれる関数
 
