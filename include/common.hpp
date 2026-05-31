@@ -10,7 +10,7 @@ now<t だったらfalse
 
 unsigned long 半分であればmillisがオーバーフローしていても判定できる。
 */
-bool millisReached(unsigned long t)
+inline bool millisReached(unsigned long t)
 {
     return UIntModRing<unsigned long>::leq(t, millis());
 }
@@ -31,9 +31,9 @@ public:
      */
     T_state set(T_state newstate)
     {
-        auto r = prev;
-        prev = current;
-        current = newstate;
+        T_state r = _prev;
+        _prev = _current;
+        _current = newstate;
         return r;
     }
 
@@ -46,11 +46,11 @@ public:
     }
     T_state prev() const
     {
-        return prev;
+        return this->_prev;
     }
     T_state current() const
     {
-        return current;
+        return this->_current;
     }
     T_state operator()() const
     {
