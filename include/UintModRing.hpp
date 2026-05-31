@@ -128,7 +128,7 @@ struct UIntModRing
         return a + static_cast<UINT>((b - a) * ratio);
     }
 
-    // m:nに内分する(m,nは非負でm+nが0でないことを期待する)
+    // a,bをm:nに内分する点を返す(m,nは非負でm+nが0でないことを期待する)
     static UINT interpolate(UINT a, UINT b, double m, double n)
     {
         return interpolate(a, b, n / (m + n));
