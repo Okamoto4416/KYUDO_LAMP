@@ -91,9 +91,9 @@ struct UIntModRing
      */
     static bool leq(const UINT a, const UINT b)
     {
-        if (b - a == a - b)
+        if (forwardDistance(a,b) == forwardDistance(b,a))
             return a <= b;
-        else if (b - a < a - b)
+        else if (forwardDistance(a,b) < forwardDistance(b,a))
             return true;
         else
             return false;
@@ -137,10 +137,10 @@ struct UIntModRing
     // 円周上の近いほうの距離
     static UINT distance(UINT a, UINT b)
     {
-        if (a - b < b - a)
-            return a - b;
+        if (forwardDistance(a,b)< forwardDistance(b,a))
+            return forwardDistance(a,b);
         else
-            return b - a;
+            return forwardDistance(b,a);
     }
 
     // aからbへ正の方向への距離
@@ -152,6 +152,6 @@ struct UIntModRing
     // ちょうど半円周だけ離れているか
     static bool isHalfTurn(UINT a, UINT b)
     {
-        return b - a == a - b && a != b;
+        return forwardDistance(a,b) == forwardDistance(b,a) && a != b;
     }
 };
