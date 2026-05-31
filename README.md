@@ -170,4 +170,38 @@
     
     - https://arduinojson.org/v7/api/json/
 
-- 
+## 知見
+
+### ArduinoJsonについて
+
+#### versionについて
+
+現在最新のv7ではstack領域に確保するStaticJsonDocumentが非推奨である。
+
+ので、v6に落としてある。
+
+#### デシリアライズについて(JsonDocとかのデータ保持方法)
+
+json形式文字列からJsonDocにする場合、文字列はjson形式の元文字列を改変(末尾にヌル文字を追加)して、そこへのポインタで保持する
+
+つまり
+
+deserialize(jsonDoc,buf,len))
+
+した場合、
+
+- bufは改変される
+
+- jsonDocの内部ではbuf内部の文字列へのポインタが保持される。
+
+そのため、**jsonDocが参照している間**は  
+
+- bufを再利用しない  
+- bufを書き換えない  
+- bufを解放しない  
+
+特に受信バッファ(rxBuf)と送信バッファ(txBuf)を共有すると、
+serializeJson()によってbufが上書きされ、  
+既存のJsonDoc内の文字列参照が壊れることがある。  
+
+受信と送信で別バッファを用意すること。
