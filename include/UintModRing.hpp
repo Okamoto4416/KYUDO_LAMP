@@ -110,7 +110,7 @@ struct UIntModRing
 
     /**
      * aからbへratioだけ進んだ点(0<=ratio<=1を期待する)
-     * ratio:1-ratioに内分する
+     * 1-ratio:ratioに内分する
      * ratio =0 -> return a
      * ratio =1 -> return b
      */
@@ -131,7 +131,7 @@ struct UIntModRing
     // m:nに内分する(m,nは非負でm+nが0でないことを期待する)
     static UINT interpolate(UINT a, UINT b, double m, double n)
     {
-        return interpolate(a, b, m / (m + n));
+        return interpolate(a, b, n / (m + n));
     }
 
     // 円周上の近いほうの距離
