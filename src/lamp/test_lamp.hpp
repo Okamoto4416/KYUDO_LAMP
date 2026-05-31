@@ -3,12 +3,14 @@
 const auto local_ip = lamp_ip;
 const auto peer_ip = remote_ip;
 
-void measurefn(JsonObjectConst json, const char *buf, int len)
+void measurefn(JsonObjectConst json)
 {
     const char *type = json["type"].as<const char *>();
-    if (type && std::strcmp(type, "ack_measure") == 0)
+    if (type)
     {
-        Serial.printf("ack_measure:");
+        char buf[256];
+        auto len = serializeJson(json, buf, sizeof(buf));
+        Serial.printf("packet:");
         Serial.write(buf, len);
         Serial.println();
     }
