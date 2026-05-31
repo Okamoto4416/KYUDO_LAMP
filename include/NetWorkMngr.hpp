@@ -52,10 +52,24 @@ class LinkMonitor
 private:
     NetworkMngr_t &NW;
 
+    bool isreseted = false; //統計情報をリセットしたか
+
     // RTT
-    double EMA_RTTms = 1600;                                // RTTの平均[ms]
-    constexpr static double EMA_RTT_alpha = 2.0 / (32 + 1); // 32個分の平均のための係数
-    uint16_t lastRTTms = 3200;                              // 最新のパケットのRTT[ms]
+    double emaRTTms = 1600;                                // RTTの平均[ms]
+    constexpr static double emaRTT_alpha = 2.0 / (32 + 1); // 32個分の平均のための係数
+    uint16_t lastRTTms = 3200;                             // 最新のパケットのRTT[ms]
+
+    // 時刻同期
+    unsigned long peerTimeOffsetMs = 0;                       // peerのmillisとのずれ peerMillis=millis()+peerOffsetMs
+    constexpr static double coolingFactor = 0.4;              // 冷却係数(5回で0.01になる)
+    constexpr static double minLearningRate = 2.0 / (32 + 1); // サンプル推定値の最低割合
+    double learningRate = 1 - minLearningRate;                // 熱(のちフィールド)//だんだん冷めていく
+    bool hasPeerMillisOffset = false;                         // すでにOffsetは推定されているか(初回と二回目以降の分岐のため)
+
+    // // Peerの有効txpacket id範囲について(受け取る価値のありそうなtxpacketIdの範囲)
+    // // あまりに逸脱していたら変なパケットである。
+    // txPacketId_t peer_last_txPacketId = 0;              // 直近に来たpeerのpacketId
+    // constexpr static auto peer_txPacketId_margin = 100; // 100よりずれたパケットIdは変だと思う。
 
     // パケットmiss,パケットloss
     constexpr static auto missTimeoutSteps = 5;  // パケットミスの定義：送ってから500ms以内にackがなければmiss
@@ -63,11 +77,6 @@ private:
     std::bitset<32> ackHistory{};                // 最近32個の送信measureパケットのack到着を格納する。
     std::bitset<16> notMissHistory{};            // 最近16個の送信measureパケットのmissを格納する。
     std::bitset<16> notLossHistory{};            // 最近16個の送信measureパケットのlossを格納する。
-
-    // Peerの有効txpacket id範囲について(受け取る価値のありそうなtxpacketIdの範囲)
-    // あまりに逸脱していたら変なパケットである。
-    txPacketId_t txPacketId_max = 0;
-    txPacketId_t txPacketId_min = 0;
 
     uint16_t measureSeqId = 0; // 計測パケットの番号(最新の送信済みパケットのもの)
 
@@ -87,6 +96,7 @@ public:
      * measureパケット受信
      * peerから来たmeasureパケットに対してackを返す
      */
+private:
     void receive_measure_packet(JsonObjectConst rx_json);
     /**
      * ack_measureパケット受信
@@ -156,6 +166,72 @@ public:
      */
     float missRate(uint8_t windowSize = 16) const;
 
+    ////////////////////////////////////////////////////////////
+    // connectedまたはunstableの時有効な統計量
+    ////////////////////////////////////////////////////////////
+
+    /**
+     * RTTのリセット
+     *
+     */
+    void RTT_reset()
+    {
+        emaRTTms = 1600;  // RTTの平均[ms]
+        lastRTTms = 3200; // 最新のパケットのRTT[ms]
+    }
+    /**
+     * 平均RTT
+     * connectedまたはunstableの時有効
+     */
+    uint16_t get_EMA_RTTms() const
+    {
+        return this->emaRTTms;
+    }
+    /**
+     * 最近のパケットのRTT
+     * connectedまたはunstableの時有効
+     */
+    uint16_t get_lastRTTms() const
+    {
+        return this->lastRTTms;
+    }
+
+    /**
+     * 時刻同期のリセット
+     */
+    void peerMillis_reset()
+    {
+        peerTimeOffsetMs = 0;
+        learningRate = 1 - minLearningRate; // 熱(のちフィールド)//だんだん冷めていく
+        hasPeerMillisOffset = false;        // すでにOffsetは推定されているか(初回と二回目以降の分岐のため)
+    }
+
+    /**
+     * peerのmillisとのずれを取得
+     * connectedまたはunstableの時有効
+     */
+    unsigned long get_peerMillisOffsetMs() const
+    {
+        return this->peerTimeOffsetMs;
+    }
+    /**
+     * peerの推定millis()
+     * connectedまたはunstableの時有効
+     */
+    unsigned long peerMillis() const
+    {
+        return millis() + this->peerTimeOffsetMs;
+    }
+
+    /**
+     * peerの時刻をlocalの時刻に変換
+     * connectedまたはunstableの時有効
+     */
+    unsigned long localMillis_from(unsigned long t_peerMillis) const
+    {
+        return t_peerMillis - this->peerTimeOffsetMs;
+    }
+
     /**
      * 下位windowSize bitの1をカウントするa
      */
@@ -207,6 +283,11 @@ public:
     void init(IPAddress local_ip, IPAddress peer_ip, UdpReceiveCallback_t fn);
 
     void update(); // 更新
+
+    State_t get_state() const
+    {
+        return state();
+    }
 
     /////////////////////////////////////////////////////////////
     // WiFi接続状態関係

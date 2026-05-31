@@ -40,8 +40,9 @@ void LinkMonitor::receive_measure_packet(JsonObjectConst rx_json)
 
 void LinkMonitor::receive_ack_measure_packet(JsonObjectConst rx_json)
 {
-    const static OverflowSafeComparator<uint16_t> comp16(1000);          // 安全比較器
-    const static OverflowSafeComparator<unsigned long> compLong(100000); // 安全比較器
+    using u16MR = UIntModRing<uint16_t>;
+    using ulMR = UIntModRing<unsigned long>;
+
     // RTT取得
     // ackパケット登録
     // Peer時刻推定
@@ -60,15 +61,15 @@ void LinkMonitor::receive_ack_measure_packet(JsonObjectConst rx_json)
         if (RTTms > 10 * 1000)
             return;
         // seqidが50遅い場合,
-        if (!comp16.leq(measureSeqId - 50, seqid))
+        if (!u16MR::leq(measureSeqId - 50, seqid))
             return;
         // seqidが未来の場合,
-        if (!comp16.leq(seqid, measureSeqId))
+        if (!u16MR::leq(seqid, measureSeqId))
             return;
         // seqidとt0の整合が取れない場合(seqidから予測したRTTから50msはずれる場合)
         unsigned long predictionRTTms = periodicTimeMs * (measureSeqId - seqid);
-        if (!(compLong.leq(predictionRTTms - 50, RTTms) &&
-              compLong.leq(RTTms, predictionRTTms + 50)))
+        if (!(ulMR::leq(predictionRTTms - 50, RTTms) &&
+              ulMR::leq(RTTms, predictionRTTms + 50)))
             return;
     }
 
@@ -85,18 +86,60 @@ void LinkMonitor::receive_ack_measure_packet(JsonObjectConst rx_json)
     }
 
     // RTT
-    lastRTTms = RTTms;
-    EMA_RTTms = EMA_RTT_alpha * RTTms + (1 - EMA_RTT_alpha) * EMA_RTTms;
+    {
+        lastRTTms = RTTms;
+        emaRTTms = emaRTT_alpha * RTTms + (1 - emaRTT_alpha) * emaRTTms;
+    }
+
+    // 時刻同期peerMillis
+    {
+        unsigned long samplePeerOffsetMs = t1 - ulMR::interpolate(t0, t2, 1, 1); // 今回のパケットからの推定オフセット
+
+        if (!hasPeerMillisOffset)
+        {
+            // 初回はそのまま採用
+            this->peerTimeOffsetMs = samplePeerOffsetMs;
+            hasPeerMillisOffset = true;
+        }
+        else
+        {
+            // 二回目以降はEMAで改善していく
+            double rtt_quality = 1.0 - std::min((double)RTTms / 3200.0, 1.0); // RTTが小さいものほど参考にしたい
+            double alpha = minLearningRate + learningRate;
+
+            auto ema_PeerOffsetMs = ulMR::interpolate(
+                samplePeerOffsetMs,
+                this->peerTimeOffsetMs,
+                alpha + (rtt_quality * 0.04),
+                1 - alpha);
+
+            this->peerTimeOffsetMs = ema_PeerOffsetMs;
+            learningRate *= coolingFactor;
+        }
+    }
+
+    this->isreseted = false;//リセットしていないことにする。
 }
 
 void LinkMonitor::update()
 {
+    // 100ms周期でmeasureパケット送信
     if (millisReached(nextTimeMs))
     {
         step_bitset();
         send_measure_packet();
 
         nextTimeMs += periodicTimeMs;
+    }
+
+    if (!isDiscovered() && !isreseted)
+    {
+        // 通信可能でない場合
+        // wifi切れてもすぐにはリセットする必要はないでしょう。のでisDiscoveredで十分だと考える
+        // 通信可能でのみ有効な統計をリセット
+        this->RTT_reset();
+        this->peerMillis_reset();
+        isreseted = true;
     }
 }
 
