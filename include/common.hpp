@@ -1,6 +1,6 @@
 #pragma once
 #include <Arduino.h>
-#include "OverflowSafeComparator.hpp"
+#include "UintModRing.hpp"
 
 /*
 現在時刻(millis())が時刻tを超過しているか安全に判定する.
@@ -8,12 +8,11 @@
 t<=now だったらtrue
 now<t だったらfalse
 
-24時間の差であればmillisがオーバーフローしていても判定できる。
+unsigned long 半分であればmillisがオーバーフローしていても判定できる。
 */
 bool millisReached(unsigned long t)
 {
-    static const OverflowSafeComparator<unsigned long> Comp(24 * 3600 * 1000); //
-    return Comp.leq(t, millis());
+    return UIntModRing<unsigned long>::leq(t, millis());
 }
 
 /**
