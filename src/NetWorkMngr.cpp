@@ -1,5 +1,8 @@
 #include "NetWorkMngr.hpp"
 
+
+NetworkMngr_t NetworkMngr;
+
 LinkMonitor::LinkMonitor(NetworkMngr_t &NW) : NW(NW) {};
 
 /////////////////////////////////////////////////////////////////
@@ -118,7 +121,7 @@ void LinkMonitor::receive_ack_measure_packet(JsonObjectConst rx_json)
         }
     }
 
-    this->isreseted = false;//リセットしていないことにする。
+    this->isreseted = false; // リセットしていないことにする。
 }
 
 void LinkMonitor::update()
@@ -184,7 +187,7 @@ bool LinkMonitor::isDiscovered() const
     return notLossHistory.count() + ackHistory.count() > 0;
 }
 
-float LinkMonitor::lossRate(uint8_t windowSize = 16) const
+float LinkMonitor::lossRate(uint8_t windowSize) const
 {
     if (windowSize == 0 || windowSize > 16)
     {
@@ -193,7 +196,7 @@ float LinkMonitor::lossRate(uint8_t windowSize = 16) const
     return 1 - (float)bitsetCountWindow(notLossHistory, windowSize) / windowSize;
 }
 
-float LinkMonitor::missRate(uint8_t windowSize = 16) const
+float LinkMonitor::missRate(uint8_t windowSize) const
 {
     if (windowSize == 0 || windowSize > 16)
     {
@@ -202,11 +205,16 @@ float LinkMonitor::missRate(uint8_t windowSize = 16) const
     return 1 - (float)bitsetCountWindow(notMissHistory, windowSize) / windowSize;
 }
 
-void NetworkMngr_t::init(IPAddress local_ip, IPAddress peer_ip, UdpReceiveCallback_t fn)
+void NetworkMngr_t::init(
+    IPAddress local_ip,
+    IPAddress peer_ip,
+    UdpReceiveCallback_t fn,
+    UdpReceiveCallback_t measurePacketCallback)
 {
     this->local_ip = local_ip;
     this->peer_ip = peer_ip;
     this->udpReceiveCallback = fn;
+    this->measurePacketCallback = measurePacketCallback;
     wifi_init();
 }
 
@@ -405,9 +413,12 @@ int NetworkMngr_t::udp_receive()
     // 処理
     // 計測パケットだったらこちらで処理
     auto r = this->linkMonitor.receive_packet(rx_jsonDocWork.as<JsonObjectConst>());
-    // 計測パケットじゃなかったら委託
-    if (!r)
-        this->udpReceiveCallback(rx_jsonDocWork.as<JsonObjectConst>());
+    if (r)
+        // 計測パケットだったらmeasurePacketCallbackに送る
+        this->measurePacketCallback(rx_jsonDocWork.as<JsonObjectConst>(), packetBuf, len);
+    else
+        // 計測パケットじゃなかったら委託
+        this->udpReceiveCallback(rx_jsonDocWork.as<JsonObjectConst>(), packetBuf, len);
 
     // jsonクリア
     rx_jsonDocWork.clear();

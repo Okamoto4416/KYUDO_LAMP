@@ -52,7 +52,7 @@ class LinkMonitor
 private:
     NetworkMngr_t &NW;
 
-    bool isreseted = false; //統計情報をリセットしたか
+    bool isreseted = false; // 統計情報をリセットしたか
 
     // RTT
     double emaRTTms = 1600;                                // RTTの平均[ms]
@@ -259,15 +259,44 @@ public:
         connected,       // 通信良好
         error,           // その他エラー
     };
-    using UdpReceiveCallback_t = void (*)(JsonObjectConst);
+    static const char *state_str(State_t s)
+    {
+        switch (s)
+        {
+        case State_t::off:
+            return "off";
+        case State_t::connectingAP:
+            return "connectingAP";
+        case State_t::discoveringPeer:
+            return "discoveringPeer";
+        case State_t::unstable:
+            return "unstable";
+        case State_t::connected:
+            return "connected";
+        case State_t::error:
+            return "error";
+        default:
+            return "";
+        }
+    }
     using JsonDoc_t = StaticJsonDocument<512>;
+    using Buff_t = char[256];
+    /**
+     * 引数：受け取ったjsonobjectと 受け取った文字列と そのサイズ
+     */
+    using UdpReceiveCallback_t = void (*)(JsonObjectConst, const char *, int);
+
+    static void NOfn(JsonObjectConst, const char *, int) {};
 
 private:
     StateMngr<State_t> state; // wifiのステータス
     IPAddress local_ip;       // このipアドレス
     IPAddress peer_ip;        // 相手のipアドレス
-
+public:
     LinkMonitor linkMonitor{*this}; // 通信路計測する奴
+
+private:
+    // 状態管理のための
 
     // connectingAP
     unsigned long nextTryTimeMs{};
@@ -279,14 +308,24 @@ public:
      * local_ipはこの機器のip
      * peer_ipは相手の機器のip
      * UdpReceiveCallback_t fn は udpを受信したときに呼び出される関数
+     * measurePacketCallback は 計測パケットが来た時に呼び出される関数
      */
-    void init(IPAddress local_ip, IPAddress peer_ip, UdpReceiveCallback_t fn);
+    void init(
+        IPAddress local_ip,
+        IPAddress peer_ip,
+        UdpReceiveCallback_t fn,
+        UdpReceiveCallback_t measurePacketCallback = NOfn);
 
     void update(); // 更新
 
     State_t get_state() const
     {
         return state();
+    }
+
+    const char *get_state_str() const
+    {
+        return state_str(state());
     }
 
     /////////////////////////////////////////////////////////////
@@ -305,7 +344,9 @@ private:
     WiFiUDP udp;
     txPacketId_t txPacketId = 0;
     UdpReceiveCallback_t udpReceiveCallback; // 受信したudpを処理する関数
-    char packetBuf[256];                     // packetバッファ。情報を保持させるな。送受信するときだけ使え
+    Buff_t packetBuf;                        // packetバッファ。情報を保持させるな。送受信するときだけ使え
+
+    UdpReceiveCallback_t measurePacketCallback; // 計測パケットが来た時に呼ばれる関数
 
     JsonDoc_t tx_jsonDocWork{}; // JSON。 情報を保持させるな。パースするときだけに使え。送信用
     JsonDoc_t rx_jsonDocWork{}; // JSON。 情報を保持させるな。パースするときだけに使え。受信用
@@ -368,4 +409,4 @@ private:
     void udp_update();
 };
 
-NetworkMngr_t NetworkMngr;
+extern NetworkMngr_t NetworkMngr;
