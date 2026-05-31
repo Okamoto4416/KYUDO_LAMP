@@ -47,6 +47,7 @@ void LinkMonitor::receive_measure_packet(JsonObjectConst rx_json)
 
 void LinkMonitor::receive_ack_measure_packet(JsonObjectConst rx_json)
 {
+    // Serial.println("receive_ack_measure_packetに入りました。");
     using u16MR = UIntModRing<uint16_t>;
     using ulMR = UIntModRing<unsigned long>;
 
@@ -62,23 +63,32 @@ void LinkMonitor::receive_ack_measure_packet(JsonObjectConst rx_json)
 
     const auto RTTms = t2 - t0;
 
+    // Serial.printf("RTTms:%lu\n",RTTms);
+    // Serial.printf("現在のseqid:%u\n",measureSeqId);
+
     // パケットがおかしくないか判定。おかしかったらパケット無視してreturn
     {
         // RTTがでかい場合
-        if (RTTms > 10 * 1000)
-            return;
+        if (RTTms > 10 * 1000){
+            Serial.println("(RTTms > 10 * 1000)");
+            return;}
         // seqidが50遅い場合,
-        if (!u16MR::leq(measureSeqId - 50, seqid))
-            return;
+        if (!u16MR::leq(measureSeqId - 50, seqid)){
+            Serial.println("(!u16MR::leq(measureSeqId - 50, seqid))");
+            return;}
         // seqidが未来の場合,
-        if (!u16MR::leq(seqid, measureSeqId))
-            return;
-        // seqidとt0の整合が取れない場合(seqidから予測したRTTから50msはずれる場合)
+        if (!u16MR::leq(seqid, measureSeqId)){
+            Serial.println("(!u16MR::leq(seqid, measureSeqId))");
+            return;}
+        // seqidとt0の整合が取れない場合(seqidから予測したRTTから100msはずれる場合)
         unsigned long predictionRTTms = periodicTimeMs * (measureSeqId - seqid);
-        if (!(ulMR::leq(predictionRTTms - 50, RTTms) &&
-              ulMR::leq(RTTms, predictionRTTms + 50)))
+        if (!(ulMR::leq(predictionRTTms - 100, RTTms) &&
+              ulMR::leq(RTTms, predictionRTTms + 100))){
+            Serial.println("seqidとt0の整合が取れない場合");
             return;
+              }
     }
+    // Serial.println("パケットはおかしくないようです。");
 
     // ackパケット登録(arrivalHistoryに登録)
     {
@@ -90,6 +100,9 @@ void LinkMonitor::receive_ack_measure_packet(JsonObjectConst rx_json)
         if (ackHistory[idx])
             return;
         ackHistory.set(idx);
+        // Serial.print("ackHistory:");
+        // auto str =ackHistory.to_string();
+        // Serial.println(str.c_str());
     }
 
     // RTT
