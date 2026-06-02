@@ -1,43 +1,47 @@
 #include <WiFi.h>
 #include <WiFiUdp.h>
 #include "routerAP_config.hpp"
-#include "test_remote.hpp"
+// #include "test_remote.hpp"
+#include "NetWorkMngr.hpp"
 
+const int buttonPin = 21; // 好きなGPIO
+bool prevButton = false;
 
-// const int udpPort = 12345;
+void setup()
+{
+    Serial.begin(115200);
 
-// WiFiUDP udp;
+    pinMode(buttonPin, INPUT_PULLUP);
 
-// const int buttonPin = 21; // 好きなGPIO
-// bool prevButton = false;
+    ///////////////////////////////////////////////////////////////////////////////////////////////
+    // WiFiの準備
+    // 自分ip,相手ip,パケット処理する関数の登録
+    // 今回パケット処理しないのでNOfnを指定しておく
+    NetworkMngr.init(remote_ip, lamp_ip, NetworkMngr.NOfn);
 
-// void setup() {
-//   Serial.begin(115200);
+    Serial.println("device_IN ready");
+}
 
-//   pinMode(buttonPin, INPUT_PULLUP);
+void loop()
+{
+    // update//////////////////////////////////////////////////////////////////////
+    NetworkMngr.update();
 
-//   WiFi.config(remote_ip, gateway, subnet);
-//   WiFi.begin(ssid, pass);
+    bool currentButton = !digitalRead(buttonPin);
 
-//   while (WiFi.status() != WL_CONNECTED) {
-//     delay(500);
-//   }
+    // 押した瞬間だけ送る（エッジ検出）
+    if (currentButton && !prevButton)
+    {
+        //////////////////////////////////////////////////////////////////////////////////////////
+        // 送信するときはjsonに書き込んで送る
+        auto txjson = NetworkMngr.beginTxJson(); // 書き込むjsonを取得
+        txjson["type"] = "toggle";               // type:"toggle"を書き込み
+        NetworkMngr.sendTxJson();                // 送信
+        //////////////////////////////////////////////////////////////////////////////////////////
 
-//   Serial.println("device_IN ready");
-// }
+        Serial.println("Sent TRUE");
+    }
 
-// void loop() {
-//   bool currentButton = !digitalRead(buttonPin);
-
-//   // 押した瞬間だけ送る（エッジ検出）
-//   if (currentButton && !prevButton) {
-//     udp.beginPacket(lamp_ip, udpPort);
-//     udp.print("TRUE");
-//     udp.endPacket();
-
-//     Serial.println("Sent TRUE");
-//   }
-
-//   prevButton = currentButton;
-//   delay(10);
-// }
+    prevButton = currentButton;
+    delay(10);
+}

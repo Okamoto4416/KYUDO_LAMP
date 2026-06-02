@@ -1,99 +1,103 @@
 #include <WiFi.h>
 #include <WiFiUdp.h>
 #include "routerAP_config.hpp"
-#include "test_lamp.hpp"
+// #include "test_lamp.hpp"
+#include "NetWorkMngr.hpp"
 
-// const int udpPort = 12345;
+void toggleLamp();
 
-// WiFiUDP udp;
-// char incomingPacket[255];
+// ピン設定
+const int buttonPin = 26;
+const int lampPin = 14;
 
-// // ピン設定
-// const int buttonPin = 26;
-// const int lampPin   = 14;
+// 状態
+volatile bool lampState = false;  // ON/OFF状態
+volatile bool blinkState = false; // 点滅用
 
-// // 状態
-// volatile bool lampState = false;  // ON/OFF状態
-// volatile bool blinkState = false; // 点滅用
+bool prevButton = false;
 
-// bool prevButton = false;
+// タイマ
+hw_timer_t *timer = NULL;
+portMUX_TYPE timerMux = portMUX_INITIALIZER_UNLOCKED;
 
-// // タイマ
-// hw_timer_t * timer = NULL;
-// portMUX_TYPE timerMux = portMUX_INITIALIZER_UNLOCKED;
+// packet処理
+// NetworkMngr.initで登録したので、パケットが来たら呼ばれる
+void processPacket(JsonObjectConst rx_json)
+{
+    auto type = rx_json["type"].as<const char *>(); // 項目typeの値の取り出し
 
-// // 割り込み処理（0.5秒ごと）
-// void IRAM_ATTR onTimer() {
-//   portENTER_CRITICAL_ISR(&timerMux);
-//   if (lampState) {
-//     blinkState = !blinkState;
-//     digitalWrite(lampPin, blinkState);
-//   }
-//   portEXIT_CRITICAL_ISR(&timerMux);
-// }
+    if (type && strcmp(type, "toggle") == 0)
+    {
+        // type:"toggle"だったら
 
-// void setup() {
-//   Serial.begin(115200);
+        toggleLamp();
+    }
+}
 
-//   pinMode(buttonPin, INPUT_PULLUP);
-//   pinMode(lampPin, OUTPUT);
+// 割り込み処理（0.5秒ごと）
+void IRAM_ATTR onTimer()
+{
+    portENTER_CRITICAL_ISR(&timerMux);
+    if (lampState)
+    {
+        blinkState = !blinkState;
+        digitalWrite(lampPin, blinkState);
+    }
+    portEXIT_CRITICAL_ISR(&timerMux);
+}
 
-//   //WiFi
-//   WiFi.config(lamp_ip, gateway, subnet);
-//   WiFi.begin(ssid, pass);
-//   while (WiFi.status() != WL_CONNECTED) {
-//     Serial.println("Failed");
-//     delay(500);
-//   }
+void setup()
+{
+    Serial.begin(115200);
 
-//   udp.begin(udpPort);
+    pinMode(buttonPin, INPUT_PULLUP);
+    pinMode(lampPin, OUTPUT);
 
-//   // タイマ設定（80MHz / 80 = 1MHz → 1μs）
-//   timer = timerBegin(0, 80, true);
-//   timerAttachInterrupt(timer, &onTimer, true);
-//   timerAlarmWrite(timer, 500000, true); // 0.5秒
-//   timerAlarmEnable(timer);
+    ////////////////////////////////////////////////////////////////////////////////
+    // WiFiの準備
+    // 自分ip,相手ip,パケット処理する関数の登録
+    NetworkMngr.init(lamp_ip, remote_ip, processPacket);
 
-//   Serial.println("device_OUT ready");
-// }
+    // タイマ設定（80MHz / 80 = 1MHz → 1μs）
+    timer = timerBegin(0, 80, true);
+    timerAttachInterrupt(timer, &onTimer, true);
+    timerAlarmWrite(timer, 500000, true); // 0.5秒
+    timerAlarmEnable(timer);
 
-// void toggleLamp() {
-//   portENTER_CRITICAL(&timerMux);
-//   lampState = !lampState;
+    Serial.println("device_OUT ready");
+}
 
-//   if (!lampState) {
-//     digitalWrite(lampPin, LOW);
-//     blinkState = false;
-//   }
+void toggleLamp()
+{
+    portENTER_CRITICAL(&timerMux);
+    lampState = !lampState;
 
-//   portEXIT_CRITICAL(&timerMux);
+    if (!lampState)
+    {
+        digitalWrite(lampPin, LOW);
+        blinkState = false;
+    }
 
-//   Serial.print("Lamp: ");
-//   Serial.println(lampState ? "ON" : "OFF");
-// }
+    portEXIT_CRITICAL(&timerMux);
 
-// void loop() {
-//   // ボタン監視
-//   bool currentButton = !digitalRead(buttonPin);
-//   if (currentButton && !prevButton) {
-//     Serial.print("button pushed ");
-//     toggleLamp();
-//   }
-//   prevButton = currentButton;
+    Serial.print("Lamp: ");
+    Serial.println(lampState ? "ON" : "OFF");
+}
 
-//   // UDP受信
-//   int packetSize = udp.parsePacket();
-//   if (packetSize) {
-//     int len = udp.read(incomingPacket, 255);
-//     if (len > 0) incomingPacket[len] = '\0';
+void loop()
+{
 
-//     Serial.print("Received: ");
-//     Serial.println(incomingPacket);
+    // update//////////////////////////////////////////////////////////////
+    NetworkMngr.update();
 
-//     if (strcmp(incomingPacket, "TRUE") == 0) {
-//       toggleLamp();
-//     }
-//   }
+    // ボタン監視
+    bool currentButton = !digitalRead(buttonPin);
+    if (currentButton && !prevButton)
+    {
+        Serial.print("button pushed ");
+        toggleLamp();
+    }
+    prevButton = currentButton;
 
-//   delay(10);
-// }
+    delay(10);
+}
