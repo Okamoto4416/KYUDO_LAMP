@@ -69,24 +69,31 @@ void LinkMonitor::receive_ack_measure_packet(JsonObjectConst rx_json)
     // パケットがおかしくないか判定。おかしかったらパケット無視してreturn
     {
         // RTTがでかい場合
-        if (RTTms > 10 * 1000){
+        if (RTTms > 10 * 1000)
+        {
             Serial.println("(RTTms > 10 * 1000)");
-            return;}
+            return;
+        }
         // seqidが50遅い場合,
-        if (!u16MR::leq(measureSeqId - 50, seqid)){
+        if (!u16MR::leq(measureSeqId - 50, seqid))
+        {
             Serial.println("(!u16MR::leq(measureSeqId - 50, seqid))");
-            return;}
+            return;
+        }
         // seqidが未来の場合,
-        if (!u16MR::leq(seqid, measureSeqId)){
+        if (!u16MR::leq(seqid, measureSeqId))
+        {
             Serial.println("(!u16MR::leq(seqid, measureSeqId))");
-            return;}
+            return;
+        }
         // seqidとt0の整合が取れない場合(seqidから予測したRTTから100msはずれる場合)
         unsigned long predictionRTTms = periodicTimeMs * (measureSeqId - seqid);
         if (!(ulMR::leq(predictionRTTms - 100, RTTms) &&
-              ulMR::leq(RTTms, predictionRTTms + 100))){
+              ulMR::leq(RTTms, predictionRTTms + 100)))
+        {
             Serial.println("seqidとt0の整合が取れない場合");
             return;
-              }
+        }
     }
     // Serial.println("パケットはおかしくないようです。");
 
@@ -234,6 +241,16 @@ void NetworkMngr_t::init(
     this->peer_ip = peer_ip;
     this->udpReceiveCallback = fn;
     this->measurePacketCallback = measurePacketCallback;
+
+    // コールバックがnullptrだったら NOPfnに置き換え
+    if (!this->udpReceiveCallback)
+    {
+        this->udpReceiveCallback = NOPfn;
+    }
+    if (!this->measurePacketCallback)
+    {
+        this->measurePacketCallback = NOPfn;
+    }
     wifi_init();
 }
 

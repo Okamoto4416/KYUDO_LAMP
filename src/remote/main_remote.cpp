@@ -17,7 +17,7 @@ void setup()
     // WiFiの準備
     // 自分ip,相手ip,パケット処理する関数の登録
     // 今回パケット処理しないのでNOfnを指定しておく
-    NetworkMngr.init(remote_ip, lamp_ip, NetworkMngr.NOfn);
+    NetworkMngr.init(remote_ip, lamp_ip);
 
     Serial.println("device_IN ready");
 }

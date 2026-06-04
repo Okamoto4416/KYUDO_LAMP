@@ -287,7 +287,8 @@ public:
      */
     using UdpReceiveCallback_t = void (*)(JsonObjectConst);
 
-    static void NOfn(JsonObjectConst) {};
+private:
+    static void NOPfn(JsonObjectConst){};
 
 private:
     StateMngr<State_t> state; // wifiのステータス
@@ -308,14 +309,14 @@ public:
      *
      * local_ipはこの機器のip
      * peer_ipは相手の機器のip
-     * UdpReceiveCallback_t fn は udpを受信したときに呼び出される関数
-     * measurePacketCallback は 計測パケットが来た時に呼び出される関数
+     * UdpReceiveCallback_t fn は udpを受信したときに呼び出される関数(nullptrだと何もしない)
+     * measurePacketCallback は 計測パケットが来た時に呼び出される関数(nullptrだと何もしない)
      */
     void init(
         IPAddress local_ip,
         IPAddress peer_ip,
-        UdpReceiveCallback_t fn,
-        UdpReceiveCallback_t measurePacketCallback = NOfn);
+        UdpReceiveCallback_t fn = nullptr,
+        UdpReceiveCallback_t measurePacketCallback = nullptr);
 
     void update(); // 更新
 
@@ -345,8 +346,8 @@ private:
     WiFiUDP udp;
     txPacketId_t txPacketId = 0;
     UdpReceiveCallback_t udpReceiveCallback; // 受信したudpを処理する関数
-    Buff_t tx_packetBuf;                        // packetバッファ。情報を保持させるな。送信するときだけ使え
-    Buff_t rx_packetBuf;                        // packetバッファ。情報を保持させるな。受信するときだけ使え
+    Buff_t tx_packetBuf;                     // packetバッファ。情報を保持させるな。送信するときだけ使え
+    Buff_t rx_packetBuf;                     // packetバッファ。情報を保持させるな。受信するときだけ使え
 
     UdpReceiveCallback_t measurePacketCallback; // 計測パケットが来た時に呼ばれる関数
 

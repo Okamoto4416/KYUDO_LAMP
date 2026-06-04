@@ -19,7 +19,7 @@ void measurefn(JsonObjectConst json)
 void setup()
 {
     Serial.begin(115200);
-    NetworkMngr.init(local_ip, peer_ip, NetworkMngr_t::NOfn, measurefn);
+    NetworkMngr.init(local_ip, peer_ip, nullptr, measurefn);
 }
 void loop()
 {
