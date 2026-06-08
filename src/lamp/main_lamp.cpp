@@ -14,8 +14,6 @@ const int lampPin = 14;
 volatile bool lampState = false;  // ON/OFF状態
 volatile bool blinkState = false; // 点滅用
 
-bool prevButton = false;
-
 // タイマ
 hw_timer_t *timer = NULL;
 portMUX_TYPE timerMux = portMUX_INITIALIZER_UNLOCKED;
@@ -90,14 +88,19 @@ void loop()
     // update//////////////////////////////////////////////////////////////
     NetworkMngr.update();
 
-    // ボタン監視
-    bool currentButton = !digitalRead(buttonPin);
-    if (currentButton && !prevButton)
+    // ボタン監視 10msごと
+    static unsigned long buttonNextTime = millis();
+    static bool prevButton = false;
+    if (millisReached(buttonNextTime))
     {
-        Serial.print("button pushed ");
-        toggleLamp();
-    }
-    prevButton = currentButton;
+        bool currentButton = !digitalRead(buttonPin);
+        if (currentButton && !prevButton)
+        {
+            Serial.print("button pushed ");
+            toggleLamp();
+        }
+        prevButton = currentButton;
 
-    delay(10);
+        buttonNextTime += 10; // delay(10);
+    }
 }

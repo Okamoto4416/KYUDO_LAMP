@@ -5,7 +5,6 @@
 #include "NetWorkMngr.hpp"
 
 const int buttonPin = 21; // 好きなGPIO
-bool prevButton = false;
 
 void setup()
 {
@@ -27,21 +26,28 @@ void loop()
     // update//////////////////////////////////////////////////////////////////////
     NetworkMngr.update();
 
-    bool currentButton = !digitalRead(buttonPin);
-
-    // 押した瞬間だけ送る（エッジ検出）
-    if (currentButton && !prevButton)
+    // ボタン監視 10msごと
+    static unsigned long buttonNextTime = millis();
+    static bool prevButton = false;
+    if (millisReached(buttonNextTime))
     {
-        //////////////////////////////////////////////////////////////////////////////////////////
-        // 送信するときはjsonに書き込んで送る
-        auto txjson = NetworkMngr.beginTxJson(); // 書き込むjsonを取得
-        txjson["type"] = "toggle";               // type:"toggle"を書き込み
-        NetworkMngr.sendTxJson();                // 送信
-        //////////////////////////////////////////////////////////////////////////////////////////
 
-        Serial.println("Sent TRUE");
+        bool currentButton = !digitalRead(buttonPin);
+
+        // 押した瞬間だけ送る（エッジ検出）
+        if (currentButton && !prevButton)
+        {
+            //////////////////////////////////////////////////////////////////////////////////////////
+            // 送信するときはjsonに書き込んで送る
+            auto txjson = NetworkMngr.beginTxJson(); // 書き込むjsonを取得
+            txjson["type"] = "toggle";               // type:"toggle"を書き込み
+            NetworkMngr.sendTxJson();                // 送信
+            //////////////////////////////////////////////////////////////////////////////////////////
+
+            Serial.println("Sent TRUE");
+        }
+
+        prevButton = currentButton;
+        buttonNextTime += 10; // delay(10);
     }
-
-    prevButton = currentButton;
-    delay(10);
 }
