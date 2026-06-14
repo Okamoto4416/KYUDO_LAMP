@@ -19,6 +19,8 @@ public:
     const uint8_t pin; // 出力対象pin
 
 public:
+    PatternBlinker8bit(const PatternBlinker8bit &) = delete;
+    PatternBlinker8bit(PatternBlinker8bit &&) = delete;
     PatternBlinker8bit(uint8_t pin, uint16_t patternPeriodMs = 1000)
         : nextChangeTimeMs(millis()),
           pin(pin),
@@ -77,6 +79,8 @@ public:
     const uint8_t pin; // 出力対象pin
 
 public:
+    PulseOutput(const PulseOutput &) = delete;
+    PulseOutput(PulseOutput &&) = delete;
     /**
      * 出力ピンの設定を設定する
      * pinは pinMode(pin,OUTOUT)しておく必要がある
@@ -144,6 +148,8 @@ class GageDigitalRead
     unsigned long preMicros;
 
 public:
+    GageDigitalRead(const GageDigitalRead &) = delete;
+    GageDigitalRead(GageDigitalRead &&) = delete;
     GageDigitalRead(uint8_t pin, bool isHigh = false, unsigned gage = 0)
         : pin(pin), isHigh(isHigh), gage(gage), preMicros(micros()) {}
 
@@ -225,6 +231,8 @@ public:
     const uint8_t pin; // 読み取る対象のpin
 
 public:
+    DebouncedDigitalRead(const DebouncedDigitalRead &) = delete;
+    DebouncedDigitalRead(DebouncedDigitalRead &&) = delete;
     DebouncedDigitalRead(uint8_t pin, bool state = false)
         : pin(pin), nextMillis(millis())
     {
