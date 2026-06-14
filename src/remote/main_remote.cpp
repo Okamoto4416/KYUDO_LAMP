@@ -5,11 +5,10 @@
 #include "NetWorkMngr.hpp"
 #include "PinEffects.hpp"
 
-constexpr unsigned buttonPin = 21;      // ボタンのpin
-constexpr unsigned NWpacketLEDpin = 19; // ネットワーク関係LEDパケットが来たら一瞬光る
-PulseOutput<5> NWpacketLEDpulse(NWpacketLEDpin);
-constexpr unsigned NWstateLEDpin = 18; // ネットワーク関係LED 状態の表示
-PatternBlinker8bit NWstateLEDblink(NWstateLEDpin);
+constexpr unsigned buttonPin = 21;      // pin21 ボタンのpin
+PulseOutput<20> NWpacketLEDpulse{19};   // pin19 ネットワーク関係LEDパケットが来たら一瞬(20ms)光る
+PatternBlinker8bit NWstateLEDblink{18}; // pin18 ネットワーク関係LED 状態の表示
+
 
 // packet処理
 // NetworkMngr.initで登録したので、パケットが来たら呼ばれる
@@ -27,8 +26,8 @@ void setup()
 
     // ピンのセット
     pinMode(buttonPin, INPUT_PULLUP);
-    pinMode(NWpacketLEDpin, OUTPUT);
-    pinMode(NWstateLEDpin, OUTPUT);
+    pinMode(NWpacketLEDpulse.pin, OUTPUT);
+    pinMode(NWstateLEDblink.pin, OUTPUT);
 
     ///////////////////////////////////////////////////////////////////////////////////////////////
     // WiFiの準備
@@ -47,34 +46,25 @@ void loop()
 
     // NW状態LED
     {
-        static auto prevState = NetworkMngr.get_state();
-        auto currentState = NetworkMngr.get_state();
-
-        if (prevState != currentState)
+        switch (NetworkMngr.get_state())
         {
-            // 状態が変化したら
+        case NetworkMngr_t::State_t::off:
+            NWstateLEDblink.setPattern(0);
+            break;
 
-            switch (currentState)
-            {
-            case NetworkMngr_t::State_t::off:
-                NWstateLEDblink.setPattern(0);
-                break;
+        case NetworkMngr_t::State_t::connectingAP:
+            NWstateLEDblink.setPattern(0b00001111);
+            break;
 
-            case NetworkMngr_t::State_t::connectingAP:
-                NWstateLEDblink.setPattern(0b00001111);
-                break;
+        case NetworkMngr_t::State_t::discoveringPeer:
+        case NetworkMngr_t::State_t::unstable:
+        case NetworkMngr_t::State_t::connected:
+            NWstateLEDblink.setPattern(0b10100000);
+            break;
 
-            case NetworkMngr_t::State_t::discoveringPeer:
-            case NetworkMngr_t::State_t::unstable:
-            case NetworkMngr_t::State_t::connected:
-                NWstateLEDblink.setPattern(0b10100000);
-                break;
-
-            default:
-                NWstateLEDblink.setPattern(0b11111111);
-                break;
-            }
-            NWstateLEDblink.restart();
+        default:
+            NWstateLEDblink.setPattern(0b11111111);
+            break;
         }
     }
 
