@@ -61,7 +61,7 @@ public:
 
 /**
  * パルスを出力する
- * 
+ *
  * pulseLengthMs : デフォルトのパルス長[ms](10ms)
  * pulseLevel    : パルス出力HIGHorLOW(HIGH)
  * idolLevel     : 停止中出力HIGHorLOW(!pulseLevel)
@@ -134,7 +134,7 @@ class GageDigitalRead
     unsigned long preMicros;
 
 public:
-    Button(uint8_t pin, bool isHigh = false, unsigned gage = 0)
+    GageDigitalRead(uint8_t pin, bool isHigh = false, unsigned gage = 0)
         : pin(pin), isHigh(isHigh), gage(gage), preMicros(micros()) {}
 
     // 呼び出さなくてよい
@@ -215,7 +215,7 @@ class DebouncedDigitalRead
 
 public:
     DebouncedDigitalRead(uint8_t pin, bool state = false)
-        : pin(pin), state(state) nextMillis(millis()) {}
+        : pin(pin), state(state), nextMillis(millis()) {}
 
     void update()
     {
