@@ -61,24 +61,25 @@ public:
 
 /**
  * パルスを出力する
+ * 
+ * pulseLengthMs : デフォルトのパルス長[ms](10ms)
+ * pulseLevel    : パルス出力HIGHorLOW(HIGH)
+ * idolLevel     : 停止中出力HIGHorLOW(!pulseLevel)
  */
+template <unsigned pulseLengthMs = 10, uint8_t pulseLevel = HIGH, uint8_t idleLevel = !pulseLevel>
 class PulseOutput
 {
-    const unsigned pulseLengthMs; // パルスの長さ
-    unsigned long finTimeMs;      // 次に切り替える時刻[ms]
+    unsigned long finTimeMs; // 次に切り替える時刻[ms]
     const uint8_t pin;
-    uint8_t idleLevel = LOW;
-    uint8_t pulseLevel = HIGH;
     bool isPulse = false; // パルス出力中か
 
 public:
     /**
-     * 出力ピンの設定とデフォルトのパルスの長さを設定する
+     * 出力ピンの設定を設定する
      * pinは pinMode(pin,OUTOUT)しておく必要がある
      * */
-    PulseOutput(uint8_t pin, unsigned pulseLengthMs = 10)
-        : pin(pin),
-          pulseLengthMs(pulseLengthMs) {}
+    PulseOutput(uint8_t pin)
+        : pin(pin) {}
 
     // パルスを出力
     void trigger(unsigned ms = 0)
@@ -98,21 +99,6 @@ public:
         {
             digitalWrite(pin, idleLevel);
             isPulse = false;
-        }
-    }
-
-    // デフォルトの出力をHIGHにするかLOWにするか
-    void setDefaultVal(uint8_t HIGH_or_LOW)
-    {
-        if (HIGH_or_LOW)
-        {
-            idleLevel = HIGH;
-            pulseLevel = LOW;
-        }
-        else
-        {
-            idleLevel = LOW;
-            pulseLevel = HIGH;
         }
     }
 };
