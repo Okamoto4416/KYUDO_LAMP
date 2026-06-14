@@ -217,7 +217,7 @@ template <typename UINT = uint8_t, unsigned interval = 5, unsigned n = 4>
 class DebouncedDigitalRead
 {
     static constexpr unsigned bitWidth = sizeof(UINT) * 8;
-    static constexpr UINT mask = ~(~UINT{0} << n);        // 下n桁が1
+    static constexpr UINT mask = (UINT{1} << n) - 1;      // 下n桁が1
     static constexpr UINT curCondMask = ~(~UINT{0} >> 1); // 最上位だけ1
     static_assert(std::is_integral<UINT>::value &&
                       std::is_unsigned<UINT>::value,
@@ -282,7 +282,7 @@ public:
 
 private:
     // 最上位ビットを取り出す
-    bool get_curstate()
+    bool get_curstate() const
     {
         return history & curCondMask;
     }
