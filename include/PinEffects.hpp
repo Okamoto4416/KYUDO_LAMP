@@ -64,7 +64,7 @@ public:
 /**
  * パルスを出力する
  *
- * pulseLengthMs : デフォルトのパルス長[ms](10ms)
+ * pulseLengthMs : デフォルトのパルス長[ms](10ms)(20s=20000ms以上は非推奨:16bituintModRingの安全比較のため)
  * pulseLevel    : パルス出力HIGHorLOW(HIGH)
  * idolLevel     : 停止中出力HIGHorLOW(!pulseLevel)
  */
@@ -95,13 +95,20 @@ public:
         isPulse = true;
         finTimeMs = millis() + ms;
     }
+
+    // pulseやめる
+    void idle()
+    {
+        digitalWrite(pin, idleLevel);
+        isPulse = false;
+    }
+
     void update()
     {
         // パルス中で且つ終了時刻を超えていたらパルス終了
         if (isPulse && millisReached(finTimeMs))
         {
-            digitalWrite(pin, idleLevel);
-            isPulse = false;
+            this->idle();
         }
     }
 };
