@@ -11,14 +11,15 @@ L->H->L->H->L->H->L->L->
 */
 class PatternBlinker8bit
 {
-    const unsigned patternPeriodMs; // 周期default:1s
+    const uint16_t patternPeriodMs; // 周期default:1s
+    uint16_t nextChangeTimeMs;      // 次に切り替える時刻[ms]
     uint8_t patternIndex{0};        // パターンの左から何番目のをみるか。0-7をとる
     uint8_t pattern{0};             // 点滅パターンを01で表す
-    unsigned long nextChangeTimeMs; // 次に切り替える時刻[ms]
-    const uint8_t pin;
+public:
+    const uint8_t pin; // 出力対象pin
 
 public:
-    PatternBlinker8bit(uint8_t pin, unsigned patternPeriodMs = 1000)
+    PatternBlinker8bit(uint8_t pin, uint16_t patternPeriodMs = 1000)
         : nextChangeTimeMs(millis()),
           pin(pin),
           patternPeriodMs(patternPeriodMs) {}
@@ -42,6 +43,7 @@ public:
         if (millisReached(this->nextChangeTimeMs))
         {
             // 現在時刻が、変更時刻より後だったら一つ進める
+
             if (this->pattern & (0b10000000 >> patternIndex))
             {
                 // patternの左からidx番目が1ならば点灯
@@ -66,12 +68,13 @@ public:
  * pulseLevel    : パルス出力HIGHorLOW(HIGH)
  * idolLevel     : 停止中出力HIGHorLOW(!pulseLevel)
  */
-template <unsigned pulseLengthMs = 10, uint8_t pulseLevel = HIGH, uint8_t idleLevel = !pulseLevel>
+template <uint16_t pulseLengthMs = 10, uint8_t pulseLevel = HIGH, uint8_t idleLevel = !pulseLevel>
 class PulseOutput
 {
-    unsigned long finTimeMs; // 次に切り替える時刻[ms]
-    const uint8_t pin;
+    uint16_t finTimeMs;   // pulse終了時刻[ms]
     bool isPulse = false; // パルス出力中か
+public:
+    const uint8_t pin; // 出力対象pin
 
 public:
     /**
@@ -82,7 +85,7 @@ public:
         : pin(pin) {}
 
     // パルスを出力
-    void trigger(unsigned ms = 0)
+    void trigger(uint16_t ms = 0)
     {
         if (ms == 0)
         {
@@ -211,7 +214,8 @@ class DebouncedDigitalRead
 
     uint16_t nextMillis; // 次の判定時刻(32bitもいらないので16bit)
     UINT history{0};     // 読み取り結果履歴HIGHが読み取られたら1が立ちシフトしていく.最上位ビットは現在の状態
-    const uint8_t pin;   // 読み取る対象のpin
+public:
+    const uint8_t pin; // 読み取る対象のpin
 
 public:
     DebouncedDigitalRead(uint8_t pin, bool state = false)
@@ -223,7 +227,7 @@ public:
     void update()
     {
 
-        if (millisReachedCast(nextMillis))
+        if (millisReached(nextMillis))
         {
             // 次の時間のセット
             nextMillis += interval;
