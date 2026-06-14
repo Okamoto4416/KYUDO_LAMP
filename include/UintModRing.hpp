@@ -170,7 +170,7 @@ struct UIntModRing
 
 #include <cassert>
 // 正しく実装できているかテストする。
-bool uintModRingTest()
+inline bool uintModRingTest()
 {
     using u16mod = UIntModRing<uint16_t>;
     using u8mod = UIntModRing<uint8_t>;
