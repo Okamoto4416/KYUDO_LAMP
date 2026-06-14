@@ -201,29 +201,35 @@ template <typename UINT = uint8_t, unsigned interval = 5, unsigned n = 4>
 class DebouncedDigitalRead
 {
     static constexpr unsigned bitWidth = sizeof(UINT) * 8;
-    static constexpr UINT mask = ~(~UINT{0} << n); // 下n桁が1
+    static constexpr UINT mask = ~(~UINT{0} << n);        // 下n桁が1
+    static constexpr UINT curCondMask = ~(~UINT{0} >> 1); // 最上位だけ1
     static_assert(std::is_integral<UINT>::value &&
                       std::is_unsigned<UINT>::value,
                   "UINTは符号なし整数の必要がある。");
     static_assert(interval > 0, "intervalは正の数である必要がある。");
-    static_assert(0 < n && n <= bitWidth, "n は 0より大きく、UINTのbitサイズ以下である必要がある。");
+    static_assert(0 < n && n + 1 <= bitWidth, "n は 0より大きく、UINTのbitサイズ-1以下である必要がある。");
 
-    unsigned long nextMillis; // 次の判定時刻
-    UINT history{0};          // 読み取り結果履歴HIGHが読み取られたら1が立ちシフトしていく
-    const uint8_t pin;        // 読み取る対象のpin
-    bool state = false;
+    uint16_t nextMillis; // 次の判定時刻(32bitもいらないので16bit)
+    UINT history{0};     // 読み取り結果履歴HIGHが読み取られたら1が立ちシフトしていく.最上位ビットは現在の状態
+    const uint8_t pin;   // 読み取る対象のpin
 
 public:
     DebouncedDigitalRead(uint8_t pin, bool state = false)
-        : pin(pin), state(state), nextMillis(millis()) {}
+        : pin(pin), nextMillis(millis())
+    {
+        set_curstate(state);
+    }
 
     void update()
     {
 
-        if (millisReached(nextMillis))
+        if (millisReachedCast(nextMillis))
         {
             // 次の時間のセット
             nextMillis += interval;
+
+            // 現在の状態を保存
+            auto curstate = get_curstate();
 
             // 履歴に入れる
             history <<= 1;
@@ -233,11 +239,15 @@ public:
             // 判定
             if ((history & mask) == mask)
             {
-                state = true;
+                set_curstate(true);
             }
             else if ((history & mask) == 0)
             {
-                state = false;
+                set_curstate(false);
+            }
+            else
+            {
+                set_curstate(curstate);
             }
         }
     }
@@ -245,9 +255,29 @@ public:
     // 判定結果読み取り
     int read() const
     {
-        if (state)
+        if (get_curstate())
             return HIGH;
         else
             return LOW;
+    }
+
+private:
+    // 最上位ビットを取り出す
+    bool get_curstate()
+    {
+        return history & curCondMask;
+    }
+
+    // 最上位ビットを設定する
+    void set_curstate(bool state)
+    {
+        if (state)
+        {
+            history |= curCondMask;
+        }
+        else
+        {
+            history &= ~curCondMask;
+        }
     }
 };
