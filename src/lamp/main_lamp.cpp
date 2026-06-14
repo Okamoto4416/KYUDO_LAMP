@@ -9,15 +9,10 @@ void toggleLamp();
 
 // ピン設定
 DebouncedDigitalRead<> button{26}; // pin 26 ボタン読み取り
-const int lampPin = 14;
+PatternBlinker8bit lampBlink{14};  // pin 14 ランプに接続
 
-// 状態
-volatile bool lampState = false;  // ON/OFF状態
-volatile bool blinkState = false; // 点滅用
-
-// タイマ
-hw_timer_t *timer = NULL;
-portMUX_TYPE timerMux = portMUX_INITIALIZER_UNLOCKED;
+// ランプ状態
+bool lampState = false; // ON/OFF状態
 
 // packet処理
 // NetworkMngr.initで登録したので、パケットが来たら呼ばれる
@@ -33,51 +28,35 @@ void processPacket(JsonObjectConst rx_json)
     }
 }
 
-// 割り込み処理（0.5秒ごと）
-void IRAM_ATTR onTimer()
-{
-    portENTER_CRITICAL_ISR(&timerMux);
-    if (lampState)
-    {
-        blinkState = !blinkState;
-        digitalWrite(lampPin, blinkState);
-    }
-    portEXIT_CRITICAL_ISR(&timerMux);
-}
-
 void setup()
 {
     Serial.begin(115200);
 
     pinMode(button.pin, INPUT_PULLUP);
-    pinMode(lampPin, OUTPUT);
+    pinMode(lampBlink.pin, OUTPUT);
 
     ////////////////////////////////////////////////////////////////////////////////
     // WiFiの準備
     // 自分ip,相手ip,パケット処理する関数の登録
     NetworkMngr.init(lamp_ip, remote_ip, processPacket);
 
-    // タイマ設定（80MHz / 80 = 1MHz → 1μs）
-    timer = timerBegin(0, 80, true);
-    timerAttachInterrupt(timer, &onTimer, true);
-    timerAlarmWrite(timer, 500000, true); // 0.5秒
-    timerAlarmEnable(timer);
-
     Serial.println("device_OUT ready");
 }
 
 void toggleLamp()
 {
-    portENTER_CRITICAL(&timerMux);
     lampState = !lampState;
 
-    if (!lampState)
+    if (lampState)
     {
-        digitalWrite(lampPin, LOW);
-        blinkState = false;
+        lampBlink.setPattern(0b11110000); // 点滅パターン設定
+        lampBlink.restart();
     }
-
-    portEXIT_CRITICAL(&timerMux);
+    else
+    {
+        lampBlink.setPattern(0b0); // 消灯パターン設定
+        lampBlink.restart();
+    }
 
     Serial.print("Lamp: ");
     Serial.println(lampState ? "ON" : "OFF");
@@ -89,13 +68,16 @@ void loop()
     // update//////////////////////////////////////////////////////////////
     NetworkMngr.update();
     button.update();
+    lampBlink.update();
 
     // ボタン監視
     {
         static bool prevButton = false;
-        bool currentButton = !button.read();
-        if (currentButton && !prevButton)
+        const bool currentButton = !button.read();
+        if (true == currentButton && false == prevButton)
         {
+            //押された瞬間
+
             Serial.print("button pushed ");
             toggleLamp();
         }
