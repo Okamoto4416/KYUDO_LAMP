@@ -160,7 +160,7 @@ public:
     {
         auto now = micros();
         auto deltaGage = micros() - preMicros;
-        if (digitalRead(pin))
+        if (HIGH == digitalRead(pin))
         {
             // HIGHだったら経過マイクロ秒だけゲージを増やす
             gage += std::min(deltaGage, gageCapacity - gage);
@@ -225,7 +225,7 @@ class DebouncedDigitalRead
     unsigned long nextMillis; // 次の判定時刻
     UINT history{0};          // 読み取り結果履歴HIGHが読み取られたら1が立ちシフトしていく
     const uint8_t pin;        // 読み取る対象のpin
-    bool state = LOW;
+    bool state = false;
 
 public:
     DebouncedDigitalRead(uint8_t pin, bool state = false)
@@ -241,17 +241,17 @@ public:
 
             // 履歴に入れる
             history <<= 1;
-            if (digitalRead(pin))
+            if (HIGH == digitalRead(pin))
                 history |= UINT{1};
 
             // 判定
             if ((history & mask) == mask)
             {
-                state = HIGH;
+                state = true;
             }
             else if ((history & mask) == 0)
             {
-                state = LOW;
+                state = false;
             }
         }
     }
