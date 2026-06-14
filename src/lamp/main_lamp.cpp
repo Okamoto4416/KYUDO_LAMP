@@ -3,11 +3,12 @@
 #include "routerAP_config.hpp"
 // #include "test_lamp.hpp"
 #include "NetWorkMngr.hpp"
+#include "PinEffects.hpp"
 
 void toggleLamp();
 
 // ピン設定
-const int buttonPin = 26;
+DebouncedDigitalRead<> button{26}; // pin 26 ボタン読み取り
 const int lampPin = 14;
 
 // 状態
@@ -48,7 +49,7 @@ void setup()
 {
     Serial.begin(115200);
 
-    pinMode(buttonPin, INPUT_PULLUP);
+    pinMode(button.pin, INPUT_PULLUP);
     pinMode(lampPin, OUTPUT);
 
     ////////////////////////////////////////////////////////////////////////////////
@@ -87,20 +88,17 @@ void loop()
 
     // update//////////////////////////////////////////////////////////////
     NetworkMngr.update();
+    button.update();
 
-    // ボタン監視 10msごと
-    static unsigned long buttonNextTime = millis();
-    static bool prevButton = false;
-    if (millisReached(buttonNextTime))
+    // ボタン監視
     {
-        bool currentButton = !digitalRead(buttonPin);
+        static bool prevButton = false;
+        bool currentButton = !button.read();
         if (currentButton && !prevButton)
         {
             Serial.print("button pushed ");
             toggleLamp();
         }
         prevButton = currentButton;
-
-        buttonNextTime += 10; // delay(10);
     }
 }
