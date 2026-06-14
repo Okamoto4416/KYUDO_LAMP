@@ -2,17 +2,20 @@
 #include <Arduino.h>
 #include "UintModRing.hpp"
 
-/*
-現在時刻(millis())が時刻tを超過しているか安全に判定する.
 
-t<=now だったらtrue
-now<t だったらfalse
-
-unsigned long 半分であればmillisがオーバーフローしていても判定できる。
-*/
-inline bool millisReached(unsigned long t)
+/**
+ * 現在時刻(millis())が時刻tを超過しているか安全に判定する.
+ * millisをcastして評価する
+ *
+ * t<=now だったらtrue
+ * now<t だったらfalse
+ *
+ * UINT 半分であればmillisがオーバーフローしていても判定できる。
+ */
+template <typename UINT>
+inline bool millisReached(UINT t)
 {
-    return UIntModRing<unsigned long>::leq(t, millis());
+    return UIntModRing<UINT>::leq(t, millis());
 }
 
 /**
