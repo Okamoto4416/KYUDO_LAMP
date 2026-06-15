@@ -12,12 +12,13 @@ PatternBlinker8bit NWstateLEDblink{18}; // pin18 ネットワーク関係LED 状
 
 // packet処理
 // NetworkMngr.initで登録したので、パケットが来たら呼ばれる
-void processPacket(JsonObjectConst rx_json)
+void processPacket_ack_measure_pulse(JsonObjectConst rx_json)
 {
     auto type = rx_json["type"].as<const char *>(); // 項目typeの値の取り出し
 
-    // パケットが来たのでパルス
-    NWpacketLEDpulse.trigger();
+    // ack_measureパケットが来たらパルス
+    if (type && strcmp(type, "ack_measure") == 0)
+        NWpacketLEDpulse.trigger();
 }
 
 void setup()
@@ -32,7 +33,11 @@ void setup()
     ///////////////////////////////////////////////////////////////////////////////////////////////
     // WiFiの準備
     // 自分ip,相手ip,パケット処理する関数の登録
-    NetworkMngr.init(remote_ip, lamp_ip, processPacket, processPacket);
+    NetworkMngr.init(
+        remote_ip,
+        lamp_ip,
+        nullptr,
+        processPacket_ack_measure_pulse);
 
     Serial.println("device_IN ready");
 }
