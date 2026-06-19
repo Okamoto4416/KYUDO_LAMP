@@ -6,9 +6,10 @@
 #include "PinEffects.hpp"
 
 // pin
-DebouncedDigitalRead<> button{21};      // pin21 ボタン
-PulseOutput<20> NWpacketLEDpulse{19};   // pin19 ネットワーク関係LEDパケットが来たら一瞬(20ms)光る
-PatternBlinker8bit NWstateLEDblink{18}; // pin18 ネットワーク関係LED 状態の表示
+DebouncedDigitalRead<> button{21};        // pin21 ボタン
+PulseOutput<20> NWpacketLEDpulse{19};     // pin19 ネットワーク関係LEDパケットが来たら一瞬(20ms)光る
+PatternBlinker8bit NWstateLEDblink{18};   // pin18 ネットワーク関係LED 状態の表示
+PulseOutput<10000> lampStateLEDpulse{22}; // pin22 ランプの状態を表示するLED(onだったら光る)(10秒パルス)
 
 // packet処理
 // NetworkMngr.initで登録したので、パケットが来たら呼ばれる
@@ -16,9 +17,36 @@ void processPacket_ack_measure_pulse(JsonObjectConst rx_json)
 {
     auto type = rx_json["type"].as<const char *>(); // 項目typeの値の取り出し
 
-    // ack_measureパケットが来たらパルス
+    // typeがなかったら無視
+    if (!type)
+    {
+        return;
+    }
+
     if (type && strcmp(type, "ack_measure") == 0)
+    {
+        // ack_measureパケットが来たらパルス
         NWpacketLEDpulse.trigger();
+    }
+    else if (strcmp(type, "lamp_state") == 0)
+    {
+        // lamp_stateパケットが来たら状態ランプを操作
+
+        if (rx_json["state"].is<bool>())
+        {
+            auto s = rx_json["state"].as<bool>();
+            if (s)
+            {
+                // trueだったら10秒パルス
+                lampStateLEDpulse.trigger();
+            }
+            else
+            {
+                //falseだったら消す
+                lampStateLEDpulse.idle();
+            }
+        }
+    }
 }
 
 void setup()
@@ -29,6 +57,7 @@ void setup()
     pinMode(button.pin, INPUT_PULLUP);
     pinMode(NWpacketLEDpulse.pin, OUTPUT);
     pinMode(NWstateLEDblink.pin, OUTPUT);
+    pinMode(lampStateLEDpulse.pin,OUTPUT);
 
     ///////////////////////////////////////////////////////////////////////////////////////////////
     // WiFiの準備
@@ -49,6 +78,7 @@ void loop()
     NWpacketLEDpulse.update();
     NWstateLEDblink.update();
     button.update();
+    lampStateLEDpulse.update();
 
     // NW状態LED
     {

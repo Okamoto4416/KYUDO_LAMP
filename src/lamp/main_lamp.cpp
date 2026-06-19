@@ -6,6 +6,7 @@
 #include "PinEffects.hpp"
 
 void toggleLamp();
+void sendLampState();
 
 // ピン設定
 DebouncedDigitalRead<> button{26}; // pin 26 ボタン読み取り
@@ -60,6 +61,23 @@ void toggleLamp()
 
     Serial.print("Lamp: ");
     Serial.println(lampState ? "ON" : "OFF");
+
+    // ランプ状態を送信
+    sendLampState();
+}
+
+/**
+ * 現在のランプの状態(on,off)を送信する関数
+ * ランプの状態が変わった時と
+ * 2Hzでそうしんされる。
+ */
+void sendLampState()
+{
+    auto txjson = NetworkMngr.beginTxJson();
+    txjson["type"] = "lamp_state";
+    txjson["state"] = lampState;
+    NetworkMngr.sendTxJson();
+    return;
 }
 
 void loop()
@@ -76,11 +94,21 @@ void loop()
         const bool currentButton = !button.read();
         if (true == currentButton && false == prevButton)
         {
-            //押された瞬間
+            // 押された瞬間
 
             Serial.print("button pushed ");
             toggleLamp();
         }
         prevButton = currentButton;
+    }
+
+    // ランプ状態の共有 2Hz
+    {
+        static uint16_t nextTime = millis(); // 次の送信時刻
+        if (millisReached(nextTime))
+        {
+            sendLampState();
+            nextTime += 500;
+        }
     }
 }
