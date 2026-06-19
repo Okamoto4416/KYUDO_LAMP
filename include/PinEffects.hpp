@@ -21,26 +21,26 @@ public:
 public:
     PatternBlinker8bit(const PatternBlinker8bit &) = delete;
     PatternBlinker8bit(PatternBlinker8bit &&) = delete;
-    PatternBlinker8bit(uint8_t pin, uint16_t patternPeriodMs = 1000)
+    PatternBlinker8bit(uint8_t pin, uint16_t patternPeriodMs = 1000) noexcept
         : nextChangeTimeMs(millis()),
           pin(pin),
           patternPeriodMs(patternPeriodMs) {}
 
     // パターンを設定
-    void setPattern(uint8_t pattern)
+    void setPattern(uint8_t pattern) noexcept
     {
         this->pattern = pattern;
     }
 
     // 周期をリセット
-    void restart()
+    void restart() noexcept
     {
         this->patternIndex = 0;
         nextChangeTimeMs = millis();
     }
 
     // loopでいっぱい実行すべきもの
-    void update()
+    void update() noexcept
     {
         if (millisReached(this->nextChangeTimeMs))
         {
@@ -85,11 +85,11 @@ public:
      * 出力ピンの設定を設定する
      * pinは pinMode(pin,OUTOUT)しておく必要がある
      * */
-    PulseOutput(uint8_t pin)
+    PulseOutput(uint8_t pin) noexcept
         : pin(pin) {}
 
     // パルスを出力
-    void trigger(uint16_t ms = 0)
+    void trigger(uint16_t ms = 0) noexcept
     {
         if (ms == 0)
         {
@@ -101,13 +101,13 @@ public:
     }
 
     // pulseやめる
-    void idle()
+    void idle() noexcept
     {
         digitalWrite(pin, idleLevel);
         isPulse = false;
     }
 
-    void update()
+    void update() noexcept
     {
         // パルス中で且つ終了時刻を超えていたらパルス終了
         if (isPulse && millisReached(finTimeMs))
@@ -150,15 +150,15 @@ class GageDigitalRead
 public:
     GageDigitalRead(const GageDigitalRead &) = delete;
     GageDigitalRead(GageDigitalRead &&) = delete;
-    GageDigitalRead(uint8_t pin, bool isHigh = false, unsigned gage = 0)
+    GageDigitalRead(uint8_t pin, bool isHigh = false, unsigned gage = 0) noexcept
         : pin(pin), isHigh(isHigh), gage(gage), preMicros(micros()) {}
 
     // 呼び出さなくてよい
-    void init()
+    void init() noexcept
     {
         preMicros = micros();
     }
-    void update()
+    void update() noexcept
     {
         auto now = micros();
         auto deltaGage = micros() - preMicros;
@@ -186,7 +186,7 @@ public:
     }
 
     // 判定結果読み取り
-    int read() const
+    int read() const noexcept
     {
         if (isHigh)
             return HIGH;
@@ -233,13 +233,13 @@ public:
 public:
     DebouncedDigitalRead(const DebouncedDigitalRead &) = delete;
     DebouncedDigitalRead(DebouncedDigitalRead &&) = delete;
-    DebouncedDigitalRead(uint8_t pin, bool state = false)
+    DebouncedDigitalRead(uint8_t pin, bool state = false) noexcept
         : pin(pin), nextMillis(millis())
     {
         set_curstate(state);
     }
 
-    void update()
+    void update() noexcept
     {
 
         if (millisReached(nextMillis))
@@ -272,7 +272,7 @@ public:
     }
 
     // 判定結果読み取り
-    int read() const
+    int read() const noexcept
     {
         if (get_curstate())
             return HIGH;
@@ -282,13 +282,13 @@ public:
 
 private:
     // 最上位ビットを取り出す
-    bool get_curstate() const
+    bool get_curstate() const noexcept
     {
         return history & curCondMask;
     }
 
     // 最上位ビットを設定する
-    void set_curstate(bool state)
+    void set_curstate(bool state) noexcept
     {
         if (state)
         {

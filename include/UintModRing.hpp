@@ -27,7 +27,7 @@ struct UIntModRing
      *
      * a(<=)b :<-> (b-a!=a-b -> b-a<a-b)∧(b-a==a-b -> a<=b)
      */
-    static bool leq(const UINT a, const UINT b)
+    static bool leq(const UINT a, const UINT b) noexcept
     {
         if (forwardDistance(a, b) == forwardDistance(b, a))
             return a <= b;
@@ -41,7 +41,7 @@ struct UIntModRing
      * less than a(<)b
      * leqを参照のこと
      */
-    static bool lt(const UINT a, const UINT b)
+    static bool lt(const UINT a, const UINT b) noexcept
     {
         return a != b && leq(a, b);
     }
@@ -52,7 +52,7 @@ struct UIntModRing
      * ratio =0 -> return a
      * ratio =1 -> return b
      */
-    static UINT interpolate(UINT a, UINT b, double ratio)
+    static UINT interpolate(UINT a, UINT b, double ratio) noexcept
     {
         if (lt(b, a))
         {
@@ -67,13 +67,17 @@ struct UIntModRing
     }
 
     // a,bをm:nに内分する点を返す(m,nは非負でm+nが0でないことを期待する)
-    static UINT interpolate(UINT a, UINT b, double m, double n)
+    static UINT interpolate(UINT a, UINT b, double m, double n) noexcept
     {
+        if (0 == m + n)
+        {
+            return UINT{0};
+        }
         return interpolate(a, b, n / (m + n));
     }
 
     // 円周上の近いほうの距離
-    static UINT distance(UINT a, UINT b)
+    static UINT distance(UINT a, UINT b) noexcept
     {
         if (forwardDistance(a, b) < forwardDistance(b, a))
             return forwardDistance(a, b);
@@ -82,25 +86,25 @@ struct UIntModRing
     }
 
     // 引き算
-    constexpr static UINT sub(UINT a, UINT b)
+    constexpr static UINT sub(UINT a, UINT b) noexcept
     {
         return a - b;
     }
 
     // 足し算
-    constexpr static UINT add(UINT a, UINT b)
+    constexpr static UINT add(UINT a, UINT b) noexcept
     {
         return a + b;
     }
 
     // aからbへ正の方向への距離
-    constexpr static UINT forwardDistance(UINT a, UINT b)
+    constexpr static UINT forwardDistance(UINT a, UINT b) noexcept
     {
         return sub(b, a);
     }
 
     // ちょうど半円周だけ離れているか
-    constexpr static bool isHalfTurn(UINT a, UINT b)
+    constexpr static bool isHalfTurn(UINT a, UINT b) noexcept
     {
         return forwardDistance(a, b) == forwardDistance(b, a) && a != b;
     }

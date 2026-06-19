@@ -13,7 +13,7 @@
  * UINT 半分であればmillisがオーバーフローしていても判定できる。
  */
 template <typename UINT>
-inline bool millisReached(UINT t)
+inline bool millisReached(UINT t)noexcept
 {
     return UIntModRing<UINT>::leq(t, millis());
 }
@@ -32,7 +32,7 @@ public:
     /**
      * 状態をセットする
      */
-    T_state set(T_state newstate)
+    T_state set(T_state newstate)noexcept
     {
         T_state r = _prev;
         _prev = _current;
@@ -43,19 +43,19 @@ public:
     /**
      * 同じ状態にセットする
      */
-    T_state set()
+    T_state set()noexcept
     {
         return set(_current);
     }
-    T_state prev() const
+    T_state prev() const noexcept
     {
         return this->_prev;
     }
-    T_state current() const
+    T_state current() const noexcept
     {
         return this->_current;
     }
-    T_state operator()() const
+    T_state operator()() const noexcept
     {
         return current();
     }
