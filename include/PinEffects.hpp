@@ -9,25 +9,31 @@
 L->H->L->H->L->H->L->L->
 と替える
 */
-class PatternBlinker8bit
+template <typename PatternType, uint8_t patternLength>
+class PatternBlinker
 {
+    static_assert(
+        std::is_unsigned<PatternType>::value,
+        "PatternTypeは符号なし整数の必要がある。");
+    
     const uint16_t patternPeriodMs; // 周期default:1s
     uint16_t nextChangeTimeMs;      // 次に切り替える時刻[ms]
+    PatternType pattern{0};         // 点滅パターンを01で表す
     uint8_t patternIndex{0};        // パターンの左から何番目のをみるか。0-7をとる
-    uint8_t pattern{0};             // 点滅パターンを01で表す
 public:
-    const uint8_t pin; // 出力対象pin
+    const uint8_t pin;                              // 出力対象pin
+    constexpr PatternType TOP = 1 << patternLength; // 0b10000...0 最初のシンボルの部分が1
 
 public:
-    PatternBlinker8bit(const PatternBlinker8bit &) = delete;
-    PatternBlinker8bit(PatternBlinker8bit &&) = delete;
-    PatternBlinker8bit(uint8_t pin, uint16_t patternPeriodMs = 1000) noexcept
+    PatternBlinker(const PatternBlinker &) = delete;
+    PatternBlinker(PatternBlinker &&) = delete;
+    PatternBlinker(uint8_t pin, uint16_t patternPeriodMs = 1000) noexcept
         : nextChangeTimeMs(millis()),
           pin(pin),
           patternPeriodMs(patternPeriodMs) {}
 
     // パターンを設定
-    void setPattern(uint8_t pattern) noexcept
+    void setPattern(PatternType pattern) noexcept
     {
         this->pattern = pattern;
     }
@@ -46,7 +52,7 @@ public:
         {
             // 現在時刻が、変更時刻より後だったら一つ進める
 
-            if (this->pattern & (0b10000000 >> patternIndex))
+            if (this->pattern & (TOP >> patternIndex))
             {
                 // patternの左からidx番目が1ならば点灯
                 digitalWrite(this->pin, HIGH);
@@ -56,12 +62,15 @@ public:
                 // 0ならば消灯
                 digitalWrite(this->pin, LOW);
             }
-            this->nextChangeTimeMs += patternPeriodMs / 8;
+            this->nextChangeTimeMs += patternPeriodMs / patternLength;
             this->patternIndex++;
-            this->patternIndex %= 8;
+            this->patternIndex %= patternLength;
         }
     }
 };
+
+using PatternBlinker8bit = PatternBlinker<uint8_t, 8>;
+using PatternBlinker16bit = PatternBlinker<uint16_t, 16>;
 
 /**
  * パルスを出力する
