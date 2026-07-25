@@ -6,10 +6,10 @@
 #include "PinEffects.hpp"
 
 // pin
-DebouncedDigitalRead<> button{21};        // pin21 ボタン
-PulseOutput<20> NWpacketLEDpulse{19};     // pin19 ネットワーク関係LEDパケットが来たら一瞬(20ms)光る
-PatternBlinker8bit NWstateLEDblink{18};   // pin18 ネットワーク関係LED 状態の表示
-PulseOutput<10000> lampStateLEDpulse{22}; // pin22 ランプの状態を表示するLED(onだったら光る)(10秒パルス)
+DebouncedDigitalRead<> button{21};             // pin21 ボタン
+PulseOutput<20> NWpacketLEDpulse{19};          // pin19 ネットワーク関係LEDパケットが来たら一瞬(20ms)光る
+PatternBlinker16bit NWstateLEDblink{18, 2000}; // pin18 ネットワーク関係LED 状態の表示
+PulseOutput<10000> lampStateLEDpulse{22};      // pin22 ランプの状態を表示するLED(onだったら光る)(10秒パルス)
 
 // packet処理
 // NetworkMngr.initで登録したので、パケットが来たら呼ばれる
@@ -42,7 +42,7 @@ void processPacket_ack_measure_pulse(JsonObjectConst rx_json)
             }
             else
             {
-                //falseだったら消す
+                // falseだったら消す
                 lampStateLEDpulse.idle();
             }
         }
@@ -57,7 +57,7 @@ void setup()
     pinMode(button.pin, INPUT_PULLUP);
     pinMode(NWpacketLEDpulse.pin, OUTPUT);
     pinMode(NWstateLEDblink.pin, OUTPUT);
-    pinMode(lampStateLEDpulse.pin,OUTPUT);
+    pinMode(lampStateLEDpulse.pin, OUTPUT);
 
     ///////////////////////////////////////////////////////////////////////////////////////////////
     // WiFiの準備
@@ -89,17 +89,17 @@ void loop()
             break;
 
         case NetworkMngr_t::State_t::connectingAP:
-            NWstateLEDblink.setPattern(0b00001111);
+            NWstateLEDblink.setPattern(0b0000000011111111);
             break;
 
         case NetworkMngr_t::State_t::discoveringPeer:
         case NetworkMngr_t::State_t::unstable:
         case NetworkMngr_t::State_t::connected:
-            NWstateLEDblink.setPattern(0b10100000);
+            NWstateLEDblink.setPattern(0b1010000010100000);
             break;
 
         default:
-            NWstateLEDblink.setPattern(0b11111111);
+            NWstateLEDblink.setPattern(0b1111111111111111);
             break;
         }
     }
