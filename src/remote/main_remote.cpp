@@ -5,10 +5,9 @@
 #include "NetWorkMngr.hpp"
 #include "PinEffects.hpp"
 
-constexpr unsigned buttonPin = 21;      // pin21 ボタンのpin
-PulseOutput<20> NWpacketLEDpulse{19};   // pin19 ネットワーク関係LEDパケットが来たら一瞬(20ms)光る
-PatternBlinker8bit NWstateLEDblink{18}; // pin18 ネットワーク関係LED 状態の表示
-
+DebouncedDigitalRead<> button{21};             // pin21 ボタン
+PulseOutput<20> NWpacketLEDpulse{19};          // pin19 ネットワーク関係LEDパケットが来たら一瞬(20ms)光る
+PatternBlinker16bit NWstateLEDblink{18, 2000}; // pin18 ネットワーク関係LED 状態の表示
 
 // packet処理
 // NetworkMngr.initで登録したので、パケットが来たら呼ばれる
@@ -25,7 +24,7 @@ void setup()
     Serial.begin(115200);
 
     // ピンのセット
-    pinMode(buttonPin, INPUT_PULLUP);
+    pinMode(button.pin, INPUT_PULLUP);
     pinMode(NWpacketLEDpulse.pin, OUTPUT);
     pinMode(NWstateLEDblink.pin, OUTPUT);
 
@@ -43,6 +42,7 @@ void loop()
     NetworkMngr.update();
     NWpacketLEDpulse.update();
     NWstateLEDblink.update();
+    button.update();
 
     // NW状態LED
     {
@@ -53,45 +53,39 @@ void loop()
             break;
 
         case NetworkMngr_t::State_t::connectingAP:
-            NWstateLEDblink.setPattern(0b00001111);
+            NWstateLEDblink.setPattern(0b0000000011111111);
             break;
 
         case NetworkMngr_t::State_t::discoveringPeer:
         case NetworkMngr_t::State_t::unstable:
         case NetworkMngr_t::State_t::connected:
-            NWstateLEDblink.setPattern(0b10100000);
+            NWstateLEDblink.setPattern(0b1010000010100000);
             break;
 
         default:
-            NWstateLEDblink.setPattern(0b11111111);
+            NWstateLEDblink.setPattern(0b1111111111111111);
             break;
         }
     }
 
-    // ボタン監視 10msごと
+    // ボタン監視
     {
-        static unsigned long buttonNextTime = millis();
         static bool prevButton = false;
-        if (millisReached(buttonNextTime))
+        bool currentButton = !button.read();
+
+        // 押した瞬間だけ送る（エッジ検出）
+        if (currentButton && !prevButton)
         {
+            //////////////////////////////////////////////////////////////////////////////////////////
+            // 送信するときはjsonに書き込んで送る
+            auto txjson = NetworkMngr.beginTxJson(); // 書き込むjsonを取得
+            txjson["type"] = "toggle";               // type:"toggle"を書き込み
+            NetworkMngr.sendTxJson();                // 送信
+            //////////////////////////////////////////////////////////////////////////////////////////
 
-            bool currentButton = !digitalRead(buttonPin);
-
-            // 押した瞬間だけ送る（エッジ検出）
-            if (currentButton && !prevButton)
-            {
-                //////////////////////////////////////////////////////////////////////////////////////////
-                // 送信するときはjsonに書き込んで送る
-                auto txjson = NetworkMngr.beginTxJson(); // 書き込むjsonを取得
-                txjson["type"] = "toggle";               // type:"toggle"を書き込み
-                NetworkMngr.sendTxJson();                // 送信
-                //////////////////////////////////////////////////////////////////////////////////////////
-
-                Serial.println("Sent TRUE");
-            }
-
-            prevButton = currentButton;
-            buttonNextTime += 10; // delay(10);
+            Serial.println("Sent TRUE");
         }
+
+        prevButton = currentButton;
     }
 }
