@@ -15,14 +15,14 @@ class PatternBlinker
     static_assert(
         std::is_unsigned<PatternType>::value,
         "PatternTypeは符号なし整数の必要がある。");
-    
+
     const uint16_t patternPeriodMs; // 周期default:1s
     uint16_t nextChangeTimeMs;      // 次に切り替える時刻[ms]
     PatternType pattern{0};         // 点滅パターンを01で表す
     uint8_t patternIndex{0};        // パターンの左から何番目のをみるか。0-7をとる
 public:
-    const uint8_t pin;                              // 出力対象pin
-    static constexpr PatternType TOP = 1U << patternLength; // 0b10000...0 最初のシンボルの部分が1
+    const uint8_t pin;                                            // 出力対象pin
+    static constexpr PatternType TOP = 1U << (patternLength - 1); // 0b10000...0 最初のシンボルの部分が1
 
 public:
     PatternBlinker(const PatternBlinker &) = delete;
