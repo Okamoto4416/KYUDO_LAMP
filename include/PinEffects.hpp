@@ -9,42 +9,50 @@
 L->H->L->H->L->H->L->L->
 と替える
 */
-class PatternBlinker8bit
+template <typename PatternType, uint8_t patternLength>
+class PatternBlinker
 {
+    static_assert(
+        std::is_unsigned<PatternType>::value,
+        "PatternTypeは符号なし整数の必要がある。");
+    
     const uint16_t patternPeriodMs; // 周期default:1s
     uint16_t nextChangeTimeMs;      // 次に切り替える時刻[ms]
+    PatternType pattern{0};         // 点滅パターンを01で表す
     uint8_t patternIndex{0};        // パターンの左から何番目のをみるか。0-7をとる
-    uint8_t pattern{0};             // 点滅パターンを01で表す
 public:
-    const uint8_t pin; // 出力対象pin
+    const uint8_t pin;                              // 出力対象pin
+    static constexpr PatternType TOP = 1U << patternLength; // 0b10000...0 最初のシンボルの部分が1
 
 public:
-    PatternBlinker8bit(uint8_t pin, uint16_t patternPeriodMs = 1000)
+    PatternBlinker(const PatternBlinker &) = delete;
+    PatternBlinker(PatternBlinker &&) = delete;
+    PatternBlinker(uint8_t pin, uint16_t patternPeriodMs = 1000) noexcept
         : nextChangeTimeMs(millis()),
           pin(pin),
           patternPeriodMs(patternPeriodMs) {}
 
     // パターンを設定
-    void setPattern(uint8_t pattern)
+    void setPattern(PatternType pattern) noexcept
     {
         this->pattern = pattern;
     }
 
     // 周期をリセット
-    void restart()
+    void restart() noexcept
     {
         this->patternIndex = 0;
         nextChangeTimeMs = millis();
     }
 
     // loopでいっぱい実行すべきもの
-    void update()
+    void update() noexcept
     {
         if (millisReached(this->nextChangeTimeMs))
         {
             // 現在時刻が、変更時刻より後だったら一つ進める
 
-            if (this->pattern & (0b10000000 >> patternIndex))
+            if (this->pattern & (TOP >> patternIndex))
             {
                 // patternの左からidx番目が1ならば点灯
                 digitalWrite(this->pin, HIGH);
@@ -54,17 +62,20 @@ public:
                 // 0ならば消灯
                 digitalWrite(this->pin, LOW);
             }
-            this->nextChangeTimeMs += patternPeriodMs / 8;
+            this->nextChangeTimeMs += patternPeriodMs / patternLength;
             this->patternIndex++;
-            this->patternIndex %= 8;
+            this->patternIndex %= patternLength;
         }
     }
 };
 
+using PatternBlinker8bit = PatternBlinker<uint8_t, 8>;
+using PatternBlinker16bit = PatternBlinker<uint16_t, 16>;
+
 /**
  * パルスを出力する
  *
- * pulseLengthMs : デフォルトのパルス長[ms](10ms)
+ * pulseLengthMs : デフォルトのパルス長[ms](10ms)(20s=20000ms以上は非推奨:16bituintModRingの安全比較のため)
  * pulseLevel    : パルス出力HIGHorLOW(HIGH)
  * idolLevel     : 停止中出力HIGHorLOW(!pulseLevel)
  */
@@ -77,15 +88,17 @@ public:
     const uint8_t pin; // 出力対象pin
 
 public:
+    PulseOutput(const PulseOutput &) = delete;
+    PulseOutput(PulseOutput &&) = delete;
     /**
      * 出力ピンの設定を設定する
      * pinは pinMode(pin,OUTOUT)しておく必要がある
      * */
-    PulseOutput(uint8_t pin)
+    PulseOutput(uint8_t pin) noexcept
         : pin(pin) {}
 
     // パルスを出力
-    void trigger(uint16_t ms = 0)
+    void trigger(uint16_t ms = 0) noexcept
     {
         if (ms == 0)
         {
@@ -95,13 +108,20 @@ public:
         isPulse = true;
         finTimeMs = millis() + ms;
     }
-    void update()
+
+    // pulseやめる
+    void idle() noexcept
+    {
+        digitalWrite(pin, idleLevel);
+        isPulse = false;
+    }
+
+    void update() noexcept
     {
         // パルス中で且つ終了時刻を超えていたらパルス終了
         if (isPulse && millisReached(finTimeMs))
         {
-            digitalWrite(pin, idleLevel);
-            isPulse = false;
+            this->idle();
         }
     }
 };
@@ -137,15 +157,17 @@ class GageDigitalRead
     unsigned long preMicros;
 
 public:
-    GageDigitalRead(uint8_t pin, bool isHigh = false, unsigned gage = 0)
+    GageDigitalRead(const GageDigitalRead &) = delete;
+    GageDigitalRead(GageDigitalRead &&) = delete;
+    GageDigitalRead(uint8_t pin, bool isHigh = false, unsigned gage = 0) noexcept
         : pin(pin), isHigh(isHigh), gage(gage), preMicros(micros()) {}
 
     // 呼び出さなくてよい
-    void init()
+    void init() noexcept
     {
         preMicros = micros();
     }
-    void update()
+    void update() noexcept
     {
         auto now = micros();
         auto deltaGage = micros() - preMicros;
@@ -173,7 +195,7 @@ public:
     }
 
     // 判定結果読み取り
-    int read() const
+    int read() const noexcept
     {
         if (isHigh)
             return HIGH;
@@ -204,7 +226,7 @@ template <typename UINT = uint8_t, unsigned interval = 5, unsigned n = 4>
 class DebouncedDigitalRead
 {
     static constexpr unsigned bitWidth = sizeof(UINT) * 8;
-    static constexpr UINT mask = ~(~UINT{0} << n);        // 下n桁が1
+    static constexpr UINT mask = (UINT{1} << n) - 1;      // 下n桁が1
     static constexpr UINT curCondMask = ~(~UINT{0} >> 1); // 最上位だけ1
     static_assert(std::is_integral<UINT>::value &&
                       std::is_unsigned<UINT>::value,
@@ -218,13 +240,15 @@ public:
     const uint8_t pin; // 読み取る対象のpin
 
 public:
-    DebouncedDigitalRead(uint8_t pin, bool state = false)
+    DebouncedDigitalRead(const DebouncedDigitalRead &) = delete;
+    DebouncedDigitalRead(DebouncedDigitalRead &&) = delete;
+    DebouncedDigitalRead(uint8_t pin, bool state = false) noexcept
         : pin(pin), nextMillis(millis())
     {
         set_curstate(state);
     }
 
-    void update()
+    void update() noexcept
     {
 
         if (millisReached(nextMillis))
@@ -257,7 +281,7 @@ public:
     }
 
     // 判定結果読み取り
-    int read() const
+    int read() const noexcept
     {
         if (get_curstate())
             return HIGH;
@@ -267,13 +291,13 @@ public:
 
 private:
     // 最上位ビットを取り出す
-    bool get_curstate()
+    bool get_curstate() const noexcept
     {
         return history & curCondMask;
     }
 
     // 最上位ビットを設定する
-    void set_curstate(bool state)
+    void set_curstate(bool state) noexcept
     {
         if (state)
         {
