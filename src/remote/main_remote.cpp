@@ -11,10 +11,18 @@ PulseOutput<20> NWpacketLEDpulse{19};          // pin19 ネットワーク関係
 PatternBlinker16bit NWstateLEDblink{18, 2000}; // pin18 ネットワーク関係LED 状態の表示
 PulseOutput<10000> lampStateLEDpulse{22};      // pin22 ランプの状態を表示するLED(onだったら光る)(10秒パルス)
 
-// packet処理
+// 計測packet処理
 // NetworkMngr.initで登録したので、パケットが来たら呼ばれる
 void processPacket_ack_measure_pulse(JsonObjectConst rx_json)
 {
+    // jsonシリアライズ
+    if (false)
+    {
+        char buf[256];
+        auto size = ArduinoJson::serializeJson(rx_json, buf, sizeof(buf));
+        Serial.write(buf, size);
+        Serial.print("\n\n");
+    }
     auto type = rx_json["type"].as<const char *>(); // 項目typeの値の取り出し
 
     // typeがなかったら無視
@@ -23,14 +31,36 @@ void processPacket_ack_measure_pulse(JsonObjectConst rx_json)
         return;
     }
 
-    if (type && strcmp(type, "ack_measure") == 0)
+    if (strcmp(type, "ack_measure") == 0)
     {
         // ack_measureパケットが来たらパルス
         NWpacketLEDpulse.trigger();
     }
-    else if (strcmp(type, "lamp_state") == 0)
+}
+
+// 普通のpacket処理
+// NetworkMngr.initで登録したので、パケットが来たら呼ばれる
+void processPacket(JsonObjectConst rx_json)
+{
+    // jsonシリアライズ
+    if (false)
+    {
+        char buf[256];
+        auto size = ArduinoJson::serializeJson(rx_json, buf, sizeof(buf));
+        Serial.write(buf, size);
+        Serial.print("\n\n");
+    }
+    auto type = rx_json["type"].as<const char *>(); // 項目typeの値の取り出し
+
+    // typeがなかったら無視
+    if (!type)
+    {
+        return;
+    }
+    if (strcmp(type, "lamp_state") == 0)
     {
         // lamp_stateパケットが来たら状態ランプを操作
+        // Serial.println("receive lamp_state");
 
         if (rx_json["state"].is<bool>())
         {
@@ -39,6 +69,7 @@ void processPacket_ack_measure_pulse(JsonObjectConst rx_json)
             {
                 // trueだったら10秒パルス
                 lampStateLEDpulse.trigger();
+                // Serial.println("state=true");
             }
             else
             {
@@ -65,7 +96,7 @@ void setup()
     NetworkMngr.init(
         remote_ip,
         lamp_ip,
-        nullptr,
+        processPacket,
         processPacket_ack_measure_pulse);
 
     Serial.println("device_IN ready");
