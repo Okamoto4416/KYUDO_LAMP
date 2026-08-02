@@ -15,14 +15,13 @@ class PatternBlinker
     static_assert(
         std::is_unsigned<PatternType>::value,
         "PatternTypeは符号なし整数の必要がある。");
-    
     const uint16_t patternPeriodMs; // 周期default:1s
     uint16_t nextChangeTimeMs;      // 次に切り替える時刻[ms]
     PatternType pattern{0};         // 点滅パターンを01で表す
     uint8_t patternIndex{0};        // パターンの左から何番目のをみるか。0-7をとる
 public:
-    const uint8_t pin;                              // 出力対象pin
-    constexpr PatternType TOP = 1 << patternLength; // 0b10000...0 最初のシンボルの部分が1
+    const uint8_t pin;                                            // 出力対象pin
+    static constexpr PatternType TOP = 1U << (patternLength - 1); // 0b10000...0 最初のシンボルの部分が1
 
 public:
     PatternBlinker(const PatternBlinker &) = delete;
@@ -226,8 +225,8 @@ template <typename UINT = uint8_t, unsigned interval = 5, unsigned n = 4>
 class DebouncedDigitalRead
 {
     static constexpr unsigned bitWidth = sizeof(UINT) * 8;
-    static constexpr UINT mask = (UINT{1} << n) - 1;      // 下n桁が1
-    static constexpr UINT curCondMask = ~(~UINT{0} >> 1); // 最上位だけ1
+    static constexpr UINT mask = (UINT{1} << n) - 1;          // 下n桁が1
+    static constexpr UINT curCondMask = 1U << (bitWidth - 1); // 最上位だけ1
     static_assert(std::is_integral<UINT>::value &&
                       std::is_unsigned<UINT>::value,
                   "UINTは符号なし整数の必要がある。");
