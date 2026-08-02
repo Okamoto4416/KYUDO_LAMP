@@ -267,6 +267,7 @@ void NetworkMngr_t::update()
 
 void NetworkMngr_t::wifi_init()
 {
+    WiFi.setSleep(false);
     WiFi.config(local_ip, gateway, subnet);
     WiFi.begin(ssid, pass);
     state.set(State_t::connectingAP);
